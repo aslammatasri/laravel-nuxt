@@ -7,7 +7,7 @@ definePageMeta({
 interface SocialAccount {
   id: number
   platform: string
-  handle: string
+  handle: string | null
   title: string | null
   thumbnail_url: string | null
   subscriber_count: number | null
@@ -19,6 +19,8 @@ interface SocialAccount {
   engagement_rate: number | null
   last_synced_at: string | null
   sync_error: string | null
+  google_email: string | null
+  verified_at: string | null
 }
 
 const { $api } = useApi()
@@ -30,24 +32,22 @@ const { data: accounts, refresh } = await useAsyncData(
 
 const youtube = computed(() => accounts.value?.data?.find(a => a.platform === 'youtube') || null)
 
-const handleInput = ref('')
 const connecting   = ref(false)
 const syncing      = ref(false)
 const errorMessage = ref('')
 
 async function connect() {
-  if (!handleInput.value.trim()) return
   connecting.value = true
   errorMessage.value = ''
   try {
+    const { code } = await useGoogleAuth().connectYoutube()
     await $api('/creator/social-accounts/youtube', {
       method: 'POST',
-      body: { handle: handleInput.value.trim() },
+      body: { code },
     })
-    handleInput.value = ''
     await refresh()
   } catch (err: any) {
-    errorMessage.value = err?.data?.message || 'Could not connect that channel'
+    errorMessage.value = err?.data?.message || err?.message || 'Could not connect that channel'
   } finally {
     connecting.value = false
   }
@@ -112,24 +112,25 @@ function formatDate(dateStr: string | null): string {
     <!-- Connect form -->
     <div class="bg-white rounded-2xl border border-gray-100 p-6 mb-6">
       <h2 class="font-semibold text-gray-900 mb-1">YouTube</h2>
-      <p class="text-sm text-gray-400 mb-4">Enter your channel handle (e.g. @mkbhd)</p>
+      <p class="text-sm text-gray-400 mb-4">Sign in with the Google account that owns your channel to verify it's really yours</p>
 
-      <div class="flex gap-3">
-        <input
-          v-model="handleInput"
-          type="text"
-          placeholder="@yourchannel"
-          class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-400"
-          @keyup.enter="connect"
-        />
-        <button
-          @click="connect"
-          :disabled="connecting || !handleInput.trim()"
-          class="bg-green-500 hover:bg-green-600 disabled:bg-green-300 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors shrink-0"
-        >
-          {{ connecting ? 'Connecting…' : youtube ? 'Reconnect' : 'Connect' }}
-        </button>
-      </div>
+      <button
+        @click="connect"
+        :disabled="connecting"
+        class="flex items-center gap-2.5 border border-gray-200 hover:bg-gray-50 disabled:opacity-60 text-gray-700 px-5 py-2.5 rounded-xl text-sm font-medium transition-colors"
+      >
+        <svg viewBox="0 0 24 24" class="w-4 h-4 shrink-0" aria-hidden="true">
+          <path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.47a5.53 5.53 0 0 1-2.4 3.63v3h3.87c2.27-2.09 3.58-5.17 3.58-8.82Z"/>
+          <path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.87-3c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.27v3.11A12 12 0 0 0 12 24Z"/>
+          <path fill="#FBBC05" d="M5.27 14.28a7.2 7.2 0 0 1 0-4.56V6.61H1.27a12 12 0 0 0 0 10.78l4-3.11Z"/>
+          <path fill="#EA4335" d="M12 4.75c1.76 0 3.35.61 4.6 1.8l3.43-3.43C17.95 1.19 15.24 0 12 0A12 12 0 0 0 1.27 6.61l4 3.11C6.22 6.86 8.87 4.75 12 4.75Z"/>
+        </svg>
+        {{ connecting ? 'Connecting…' : youtube ? 'Reconnect with Google' : 'Connect with Google' }}
+      </button>
+
+      <p v-if="youtube?.verified_at" class="text-xs text-gray-400 mt-3">
+        Verified via {{ youtube.google_email }}
+      </p>
 
       <p v-if="errorMessage" class="text-sm text-red-500 mt-3">{{ errorMessage }}</p>
     </div>

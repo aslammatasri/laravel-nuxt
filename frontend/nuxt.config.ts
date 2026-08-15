@@ -19,6 +19,7 @@ export default defineNuxtConfig({
     public: {
       apiBase: 'http://affiliatemy.test/api',
       storageBase: 'http://affiliatemy.test/storage',
+      googleClientId: '',
     },
   },
 

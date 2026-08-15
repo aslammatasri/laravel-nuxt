@@ -11,14 +11,12 @@ class YoutubeService
 
     private const RECENT_VIDEO_COUNT = 10;
 
-    public function resolveChannel(string $handle): array
+    public function resolveChannelById(string $channelId): array
     {
-        $handle = ltrim(trim($handle), '@');
-
         $response = Http::get(self::BASE_URL . '/channels', [
-            'part'      => 'snippet,statistics,contentDetails',
-            'forHandle' => $handle,
-            'key'       => config('services.youtube.key'),
+            'part' => 'snippet,statistics,contentDetails',
+            'id'   => $channelId,
+            'key'  => config('services.youtube.key'),
         ]);
 
         if (! $response->successful()) {
@@ -31,15 +29,79 @@ class YoutubeService
             throw new \Exception('YouTube channel not found', 404);
         }
 
-        $channel = $items[0];
+        return $this->mapChannelItem($items[0]);
+    }
 
+    public function resolveOwnedChannel(string $accessToken): array
+    {
+        $response = Http::withToken($accessToken)->get(self::BASE_URL . '/channels', [
+            'part' => 'snippet,statistics,contentDetails',
+            'mine' => 'true',
+        ]);
+
+        if (! $response->successful()) {
+            throw new \Exception('Unable to reach YouTube API', 502);
+        }
+
+        $items = $response->json('items', []);
+
+        if (empty($items)) {
+            throw new \Exception('No YouTube channel found on this Google account', 404);
+        }
+
+        return $this->mapChannelItem($items[0]);
+    }
+
+    public function exchangeCodeForToken(string $code): array
+    {
+        $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
+            'code'          => $code,
+            'client_id'     => config('services.google.client_id'),
+            'client_secret' => config('services.google.client_secret'),
+            'redirect_uri'  => 'postmessage',
+            'grant_type'    => 'authorization_code',
+        ]);
+
+        if (! $response->successful()) {
+            throw new \Exception('Unable to verify Google account', 502);
+        }
+
+        return $response->json();
+    }
+
+    public function connectAndVerify(string $code): array
+    {
+        $token = $this->exchangeCodeForToken($code);
+
+        $channel = $this->resolveOwnedChannel($token['access_token']);
+
+        return $channel + ['google_email' => $this->extractEmail($token['id_token'] ?? null)];
+    }
+
+    private function extractEmail(?string $idToken): ?string
+    {
+        if (! $idToken || substr_count($idToken, '.') !== 2) {
+            return null;
+        }
+
+        [, $payload] = explode('.', $idToken);
+        $claims = json_decode(base64_decode(strtr($payload, '-_', '+/')), true);
+
+        return $claims['email'] ?? null;
+    }
+
+    private function mapChannelItem(array $channel): array
+    {
         return [
-            'channel_id'         => $channel['id'],
-            'title'              => $channel['snippet']['title'] ?? null,
-            'thumbnail_url'      => $channel['snippet']['thumbnails']['default']['url'] ?? null,
-            'subscriber_count'   => (int) ($channel['statistics']['subscriberCount'] ?? 0),
-            'view_count'         => (int) ($channel['statistics']['viewCount'] ?? 0),
-            'video_count'        => (int) ($channel['statistics']['videoCount'] ?? 0),
+            'channel_id'          => $channel['id'],
+            'handle'              => isset($channel['snippet']['customUrl'])
+                ? ltrim($channel['snippet']['customUrl'], '@')
+                : null,
+            'title'               => $channel['snippet']['title'] ?? null,
+            'thumbnail_url'       => $channel['snippet']['thumbnails']['default']['url'] ?? null,
+            'subscriber_count'    => (int) ($channel['statistics']['subscriberCount'] ?? 0),
+            'view_count'          => (int) ($channel['statistics']['viewCount'] ?? 0),
+            'video_count'         => (int) ($channel['statistics']['videoCount'] ?? 0),
             'uploads_playlist_id' => $channel['contentDetails']['relatedPlaylists']['uploads'] ?? null,
         ];
     }
@@ -100,7 +162,7 @@ class YoutubeService
     public function syncAccount(CreatorSocialAccount $account): CreatorSocialAccount
     {
         try {
-            $channel = $this->resolveChannel($account->handle);
+            $channel = $this->resolveChannelById($account->channel_id);
             $engagement = $channel['uploads_playlist_id']
                 ? $this->fetchRecentEngagement($channel['uploads_playlist_id'])
                 : [];
