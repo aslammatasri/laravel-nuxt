@@ -23,7 +23,7 @@ class ConnectYoutubeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'handle' => 'required|string|max:100',
+            'code' => 'required|string',
         ];
     }
 }

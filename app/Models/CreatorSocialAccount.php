@@ -23,6 +23,8 @@ class CreatorSocialAccount extends Model
         'engagement_rate',
         'last_synced_at',
         'sync_error',
+        'google_email',
+        'verified_at',
     ];
 
     protected function casts(): array
@@ -36,6 +38,7 @@ class CreatorSocialAccount extends Model
             'avg_recent_comments'  => 'integer',
             'engagement_rate'      => 'float',
             'last_synced_at'       => 'datetime',
+            'verified_at'          => 'datetime',
         ];
     }
 
