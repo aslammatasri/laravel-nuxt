@@ -346,7 +346,9 @@ const columns: ColumnDef<Application, any>[] = [
             v-if="!applications?.data?.length"
             class="bg-white rounded-2xl border border-gray-100 px-6 py-16 text-center"
         >
-            <p class="text-4xl mb-3">📋</p>
+            <div class="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-4">
+                <AppIcon name="applications" class="text-blue-500" />
+            </div>
             <p class="font-medium text-gray-600">
                 No {{ status || "" }} applications
             </p>

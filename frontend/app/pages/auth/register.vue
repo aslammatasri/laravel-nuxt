@@ -30,7 +30,6 @@ const isBrand = computed(() => role.value === "brand");
 const btnClass = computed(() =>
     isBrand.value ? "rg-btn-brand" : "rg-btn-creator",
 );
-const iconMap = { creator: "🎥", brand: "🏪" } as const;
 </script>
 
 <template>
@@ -44,7 +43,7 @@ const iconMap = { creator: "🎥", brand: "🏪" } as const;
             <div class="rg-header">
                 <NuxtLink to="/" class="rg-logo">AffiliateMY</NuxtLink>
                 <div class="rg-role-badge">
-                    <span class="rg-role-icon">{{ iconMap[role] }}</span>
+                    <AppIcon :name="role === 'brand' ? 'creators' : 'video'" class="rg-role-icon" />
                     {{ role === "brand" ? "Brand Account" : "Creator Account" }}
                 </div>
                 <h2 class="rg-title">Create your account</h2>
@@ -68,7 +67,7 @@ const iconMap = { creator: "🎥", brand: "🏪" } as const;
                     <div class="rg-field">
                         <label class="rg-label">Full Name</label>
                         <div class="rg-input-wrap">
-                            <span class="rg-input-icon">👤</span>
+                            <AppIcon name="user" class="rg-input-icon" />
                             <input
                                 v-model="form.name"
                                 type="text"
@@ -83,7 +82,7 @@ const iconMap = { creator: "🎥", brand: "🏪" } as const;
                     <div class="rg-field">
                         <label class="rg-label">Email</label>
                         <div class="rg-input-wrap">
-                            <span class="rg-input-icon">📧</span>
+                            <AppIcon name="mail" class="rg-input-icon" />
                             <input
                                 v-model="form.email"
                                 type="email"
@@ -98,7 +97,7 @@ const iconMap = { creator: "🎥", brand: "🏪" } as const;
                     <div class="rg-field">
                         <label class="rg-label">Password</label>
                         <div class="rg-input-wrap">
-                            <span class="rg-input-icon">🔒</span>
+                            <AppIcon name="lock" class="rg-input-icon" />
                             <input
                                 v-model="form.password"
                                 type="password"
@@ -113,7 +112,7 @@ const iconMap = { creator: "🎥", brand: "🏪" } as const;
                     <div class="rg-field">
                         <label class="rg-label">Confirm Password</label>
                         <div class="rg-input-wrap">
-                            <span class="rg-input-icon">✓</span>
+                            <AppIcon name="check" class="rg-input-icon" />
                             <input
                                 v-model="form.password_confirmation"
                                 type="password"
@@ -236,7 +235,9 @@ const iconMap = { creator: "🎥", brand: "🏪" } as const;
 }
 
 .rg-role-icon {
-    font-size: 0.9rem;
+    width: 14px;
+    height: 14px;
+    color: #4f46e5;
 }
 
 .rg-title {
@@ -309,8 +310,9 @@ const iconMap = { creator: "🎥", brand: "🏪" } as const;
 .rg-input-icon {
     position: absolute;
     left: 1rem;
-    font-size: 1rem;
-    line-height: 1;
+    width: 16px;
+    height: 16px;
+    color: #9ca3af;
     pointer-events: none;
 }
 

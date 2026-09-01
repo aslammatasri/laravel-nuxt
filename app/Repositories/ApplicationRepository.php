@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Enums\ApplicationStatus;
 use App\Models\ProductApplication;
 use App\Repositories\Contracts\ApplicationRepositoryInterface;
 
@@ -47,6 +48,7 @@ class ApplicationRepository extends BaseRepository implements ApplicationReposit
         return $this->model
             ->where('creator_id', $creatorId)
             ->where('product_id', $productId)
+            ->where('status', '!=', ApplicationStatus::REJECTED->value)
             ->exists();
     }
 

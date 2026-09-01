@@ -58,7 +58,9 @@ async function deleteProduct(id: number) {
             v-if="!products?.data?.length"
             class="bg-white rounded-2xl border border-gray-100 px-6 py-16 text-center text-gray-400"
         >
-            <p class="text-4xl mb-3">📦</p>
+            <div class="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-4">
+                <AppIcon name="products" class="text-blue-500" />
+            </div>
             <p class="font-medium text-gray-600">No products yet</p>
             <p class="text-sm mt-1">
                 Add your first product to start finding creators
@@ -91,9 +93,9 @@ async function deleteProduct(id: number) {
                     />
                     <div
                         v-else
-                        class="w-full h-full flex items-center justify-center text-4xl"
+                        class="w-full h-full flex items-center justify-center"
                     >
-                        📦
+                        <AppIcon name="products" class="w-10 h-10 text-gray-300" />
                     </div>
                 </div>
 

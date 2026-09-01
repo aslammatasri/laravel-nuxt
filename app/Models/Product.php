@@ -37,7 +37,7 @@ class Product extends Model
 
     public function getImagesAttribute($value): array
     {
-        $images = json_decode($value, true) ?? [];
+        $images = $value ? json_decode($value, true) : [];
         if (empty($images) && $this->image) {
             return [$this->image];
         }
