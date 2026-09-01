@@ -1,58 +1,91 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# affiliateMY
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+An affiliate marketplace connecting **brands** with **creators**. Brands list products for promotion; creators apply, get approved, and promote products through their connected social accounts (starting with YouTube).
 
-## About Laravel
+## Tech stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Backend**: Laravel 13 (PHP 8.3), MySQL, Laravel Sanctum (API token auth)
+- **Frontend**: Nuxt 4 (Vue 3), Pinia, Tailwind CSS, TanStack Table
+- **Auth**: Sanctum-based API tokens, role middleware (`brand`, `creator`, `admin`)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Project structure
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
-
-```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+```
+.
+├── app/                # Laravel application code (Controllers, Models, Services, Repositories)
+├── database/           # Migrations, factories, seeders
+├── routes/api.php       # API routes consumed by the frontend
+├── frontend/            # Nuxt 4 application (separate npm project)
+└── resources/           # Laravel-served assets (Blade welcome page only)
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+The backend is API-only (`routes/api.php`); the Nuxt app in `frontend/` is a separate project with its own `package.json` and talks to the API over HTTP.
 
-## Contributing
+## Features
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- **Roles**: `brand`, `creator`, `admin` (see `App\Enums\UserRole`)
+- **Brands**: create/manage products & variations, review creator applications, view creator portfolios
+- **Creators**: browse the marketplace, apply to promote products, connect & verify a YouTube account, track applications and earnings
+- **Applications**: pending → approved/rejected workflow (see `App\Enums\ApplicationStatus`)
+- **Notifications**: in-app notifications for application status changes
+- **Google/YouTube integration**: creators connect a YouTube channel for verification via `App\Services\YoutubeService`
 
-## Code of Conduct
+## Prerequisites
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+- PHP 8.3+
+- Composer
+- Node.js + npm
+- MySQL
+- [Laravel Herd](https://herd.laravel.com) (or any local PHP dev environment)
 
-## Security Vulnerabilities
+## Backend setup
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+```
 
-## License
+Configure your database in `.env` (defaults to a local MySQL database named `affiliatemy`), then run:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```bash
+php artisan migrate
+```
+
+Set the following in `.env` for YouTube verification to work:
+
+```
+YOUTUBE_API_KEY=
+```
+
+Serve the API (if not using Herd):
+
+```bash
+php artisan serve
+```
+
+## Frontend setup
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+The frontend expects the API at `http://affiliatemy.test/api` by default (see `frontend/nuxt.config.ts` `runtimeConfig.public`). Update `apiBase`, `storageBase`, and `googleClientId` there if your local setup differs.
+
+## Testing
+
+```bash
+php artisan test
+```
+
+## API overview
+
+All API routes are under `/api` (see `routes/api.php`):
+
+- `POST /api/auth/register`, `login`, `forgot-password`, `reset-password` — public
+- `GET /api/auth/me`, `POST /api/auth/logout` — authenticated
+- `/api/brand/*` — brand-only (products, variations, applications, creator portfolios)
+- `/api/creator/*` — creator-only (marketplace, applications, social account connection)
+- `/api/notifications/*` — shared between roles

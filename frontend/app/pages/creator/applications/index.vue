@@ -158,7 +158,9 @@ const columns: ColumnDef<Application, any>[] = [
             v-if="!applications?.data?.length"
             class="bg-white rounded-2xl border border-gray-100 px-6 py-16 text-center text-gray-400"
         >
-            <p class="text-4xl mb-3">📋</p>
+            <div class="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
+                <AppIcon name="applications" class="text-green-500" />
+            </div>
             <p class="font-medium text-gray-600">No applications yet</p>
             <p class="text-sm mt-1">
                 Browse the marketplace and apply to products you want to promote

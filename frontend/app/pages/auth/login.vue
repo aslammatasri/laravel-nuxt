@@ -45,7 +45,7 @@ function handleKeydown(e: KeyboardEvent) {
                     <div class="lg-field">
                         <label class="lg-label">Email</label>
                         <div class="lg-input-wrap">
-                            <span class="lg-input-icon">📧</span>
+                            <AppIcon name="mail" class="lg-input-icon" />
                             <input
                                 v-model="form.email"
                                 type="email"
@@ -74,7 +74,7 @@ function handleKeydown(e: KeyboardEvent) {
                             >
                         </div>
                         <div class="lg-input-wrap">
-                            <span class="lg-input-icon">🔒</span>
+                            <AppIcon name="lock" class="lg-input-icon" />
                             <input
                                 v-model="form.password"
                                 type="password"
@@ -241,8 +241,9 @@ function handleKeydown(e: KeyboardEvent) {
 .lg-input-icon {
     position: absolute;
     left: 1rem;
-    font-size: 1rem;
-    line-height: 1;
+    width: 16px;
+    height: 16px;
+    color: #9ca3af;
     pointer-events: none;
 }
 

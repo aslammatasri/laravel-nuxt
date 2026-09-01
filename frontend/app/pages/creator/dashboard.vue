@@ -121,7 +121,9 @@ const approvedApplications = computed(
                 v-if="!marketplace?.data?.length"
                 class="px-6 py-12 text-center text-gray-400"
             >
-                <p class="text-4xl mb-3">🛍️</p>
+                <div class="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
+                    <AppIcon name="marketplace" class="text-green-500" />
+                </div>
                 <p class="font-medium">No products available yet</p>
                 <p class="text-sm mt-1">
                     Check back soon for new products to promote

@@ -26,8 +26,8 @@ definePageMeta({
                 >
                     <div class="rt-card-bg"></div>
                     <div class="rt-card-content">
-                        <div class="rt-emoji-wrap">
-                            <span class="rt-emoji">🎥</span>
+                        <div class="rt-icon-wrap">
+                            <AppIcon name="video" class="rt-icon" />
                         </div>
                         <h2 class="rt-card-title">I'm a Creator</h2>
                         <p class="rt-card-desc">
@@ -53,8 +53,8 @@ definePageMeta({
                 >
                     <div class="rt-card-bg"></div>
                     <div class="rt-card-content">
-                        <div class="rt-emoji-wrap">
-                            <span class="rt-emoji">🏪</span>
+                        <div class="rt-icon-wrap">
+                            <AppIcon name="creators" class="rt-icon" />
                         </div>
                         <h2 class="rt-card-title">I'm a Brand</h2>
                         <p class="rt-card-desc">
@@ -232,7 +232,7 @@ definePageMeta({
     text-align: center;
 }
 
-.rt-emoji-wrap {
+.rt-icon-wrap {
     width: 64px;
     height: 64px;
     border-radius: 18px;
@@ -240,15 +240,21 @@ definePageMeta({
     align-items: center;
     justify-content: center;
     margin-bottom: 1.25rem;
-    font-size: 1.75rem;
 }
 
-.rt-card-creator .rt-emoji-wrap {
+.rt-icon-wrap :deep(.rt-icon) {
+    width: 28px;
+    height: 28px;
+}
+
+.rt-card-creator .rt-icon-wrap {
     background: rgba(79, 70, 229, 0.1);
+    color: #4f46e5;
 }
 
-.rt-card-brand .rt-emoji-wrap {
+.rt-card-brand .rt-icon-wrap {
     background: rgba(71, 85, 105, 0.12);
+    color: #475569;
 }
 
 .rt-card-title {

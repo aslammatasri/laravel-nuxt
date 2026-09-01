@@ -207,7 +207,7 @@ async function handleSubmit() {
                             v-else
                             class="flex flex-col items-center justify-center w-full h-36 border-2 border-dashed border-gray-200 rounded-xl cursor-pointer hover:border-blue-400 hover:bg-blue-50 transition-colors"
                         >
-                            <span class="text-3xl mb-2">📷</span>
+                            <AppIcon name="image" class="w-8 h-8 mb-2 text-gray-400" />
                             <span class="text-sm font-medium text-gray-600"
                                 >Click to upload images</span
                             >

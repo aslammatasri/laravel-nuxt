@@ -19,6 +19,7 @@ class ProductApplication extends Model
         'creator_id',
         'status',
         'message',
+        'pitch_message',
     ];
 
     public function product(): BelongsTo

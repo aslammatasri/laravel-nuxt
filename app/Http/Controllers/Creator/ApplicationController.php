@@ -28,11 +28,15 @@ class ApplicationController extends Controller
     // POST /api/creator/products/{id}/apply
     public function store(StoreApplicationRequest $request, int $productId)
     {
-        $application = $this->applicationService->applyToProduct(
-            $request->user()->id,
-            $productId,
-            $request->validated()['pitch_message']
-        );
+        try {
+            $application = $this->applicationService->applyToProduct(
+                $request->user()->id,
+                $productId,
+                $request->validated()['pitch_message']
+            );
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], $e->getCode() ?: 422);
+        }
 
         return response()->json($application, 201);
     }

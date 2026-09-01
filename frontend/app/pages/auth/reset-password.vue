@@ -78,7 +78,7 @@ async function handleSubmit() {
             <div class="lg-field">
               <label class="lg-label">New Password</label>
               <div class="lg-input-wrap">
-                <span class="lg-input-icon">🔒</span>
+                <AppIcon name="lock" class="lg-input-icon" />
                 <input
                   v-model="form.password"
                   type="password"
@@ -92,7 +92,7 @@ async function handleSubmit() {
             <div class="lg-field">
               <label class="lg-label">Confirm Password</label>
               <div class="lg-input-wrap">
-                <span class="lg-input-icon">🔒</span>
+                <AppIcon name="lock" class="lg-input-icon" />
                 <input
                   v-model="form.password_confirmation"
                   type="password"
@@ -154,7 +154,7 @@ async function handleSubmit() {
 .lg-field { display: flex; flex-direction: column; gap: 0.35rem; }
 .lg-label { font-size: 0.8rem; font-weight: 600; color: #555; letter-spacing: 0.01em; }
 .lg-input-wrap { position: relative; display: flex; align-items: center; }
-.lg-input-icon { position: absolute; left: 1rem; font-size: 1rem; line-height: 1; pointer-events: none; }
+.lg-input-icon { position: absolute; left: 1rem; width: 16px; height: 16px; color: #9ca3af; pointer-events: none; }
 .lg-input { width: 100%; border: 1.5px solid #e5e5e3; border-radius: 14px; padding: 0.85rem 1rem 0.85rem 2.75rem; font-size: 0.9rem; font-family: 'Inter', sans-serif; color: #1a1a18; background: #fafafa; transition: border-color 0.2s, background 0.2s, box-shadow 0.2s; outline: none; }
 .lg-input:focus { border-color: #4f46e5; background: #fff; box-shadow: 0 0 0 4px rgba(79,70,229,0.08); }
 .lg-input::placeholder { color: #bbb; }
