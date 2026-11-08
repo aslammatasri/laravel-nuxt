@@ -28,19 +28,37 @@ const showCurrent   = ref(false)
 const showNew       = ref(false)
 const showConfirm   = ref(false)
 
+const nameUnchanged = computed(() => nameForm.name.trim() === (authStore.user?.name || ''))
+
 const passwordStrength = computed(() => {
   const p = passwordForm.password
   if (!p) return null
-  if (p.length < 8) return { level: 0, label: 'Too short', barClass: 'bg-red-500', textClass: 'text-red-500' }
+  if (p.length < 8) return { level: 0, label: 'Too short', tone: 'bad' }
   let score = 0
   if (p.length >= 12) score++
   if (/[A-Z]/.test(p)) score++
   if (/[0-9]/.test(p)) score++
   if (/[^A-Za-z0-9]/.test(p)) score++
-  if (score <= 1) return { level: 1, label: 'Weak', barClass: 'bg-red-500', textClass: 'text-red-500' }
-  if (score === 2) return { level: 2, label: 'Fair', barClass: 'bg-amber-500', textClass: 'text-amber-500' }
-  if (score === 3) return { level: 3, label: 'Good', barClass: 'bg-green-500', textClass: 'text-green-600' }
-  return { level: 4, label: 'Strong', barClass: 'bg-green-600', textClass: 'text-green-700' }
+  if (score <= 1) return { level: 1, label: 'Weak', tone: 'bad' }
+  if (score === 2) return { level: 2, label: 'Fair', tone: 'fair' }
+  if (score === 3) return { level: 3, label: 'Good', tone: 'good' }
+  return { level: 4, label: 'Strong', tone: 'strong' }
+})
+
+const passwordChecks = computed(() => {
+  const p = passwordForm.password
+  return [
+    { label: '8+ characters', ok: p.length >= 8 },
+    { label: '12+ characters', ok: p.length >= 12 },
+    { label: 'Uppercase letter', ok: /[A-Z]/.test(p) },
+    { label: 'Number', ok: /[0-9]/.test(p) },
+    { label: 'Symbol', ok: /[^A-Za-z0-9]/.test(p) },
+  ]
+})
+
+const matchState = computed(() => {
+  if (!passwordForm.password_confirmation) return null
+  return passwordForm.password === passwordForm.password_confirmation ? 'match' : 'mismatch'
 })
 
 async function handleUpdateName() {
@@ -84,208 +102,521 @@ async function handleUpdatePassword() {
     passLoading.value = false
   }
 }
-
-const accent = computed(() => authStore.isBrand
-  ? { text: 'text-blue-600', bg: 'bg-blue-100', ring: 'focus:ring-blue-400', btn: 'bg-blue-600 hover:bg-blue-700', chip: 'bg-blue-50 text-blue-700' }
-  : { text: 'text-green-600', bg: 'bg-green-100', ring: 'focus:ring-green-400', btn: 'bg-green-500 hover:bg-green-600', chip: 'bg-green-50 text-green-700' }
-)
 </script>
 
 <template>
-  <div class="max-w-2xl mx-auto">
+  <div class="st-page" :data-role="authStore.isBrand ? 'brand' : 'creator'">
 
     <NuxtLink
       :to="authStore.isBrand ? '/brand/dashboard' : '/creator/dashboard'"
-      class="inline-flex items-center gap-1.5 text-sm font-medium text-gray-400 hover:text-gray-600 transition-colors mb-4"
+      class="st-back"
     >
-      <AppIcon name="dashboard" class="w-4 h-4" />
+      <AppIcon name="dashboard" class="st-back__icon" />
       Back to dashboard
     </NuxtLink>
 
-    <h1 class="text-2xl font-bold text-gray-900">Account Settings</h1>
-    <p class="text-gray-500 mt-1 mb-8">Manage your profile and security preferences</p>
+    <header class="st-head">
+      <h1 class="st-title">Account settings</h1>
+      <p class="st-sub">Manage your profile and security preferences</p>
+    </header>
 
-    <!-- Profile -->
-    <div class="bg-white rounded-2xl border border-gray-100 mb-6">
-      <div class="px-6 py-4 border-b border-gray-100">
-        <h2 class="font-semibold text-gray-900">Profile</h2>
-      </div>
+    <div class="st-grid">
 
-      <div class="p-6">
-        <div class="flex items-center gap-4 pb-6 mb-6 border-b border-gray-100">
-          <div
-            class="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold shrink-0"
-            :class="[accent.bg, accent.text]"
-          >
+      <!-- Identity -->
+      <aside class="st-side">
+        <div class="st-id">
+          <div class="st-avatar" aria-hidden="true">
             {{ authStore.user?.name?.charAt(0).toUpperCase() || '?' }}
           </div>
-          <div class="min-w-0">
-            <p class="font-semibold text-gray-900 truncate">{{ authStore.user?.name }}</p>
-            <p class="text-sm text-gray-400 truncate">{{ authStore.user?.email }}</p>
-            <span class="inline-block mt-1.5 text-xs font-semibold px-2.5 py-0.5 rounded-full" :class="accent.chip">
-              {{ authStore.isBrand ? 'Brand account' : 'Creator account' }}
-            </span>
-          </div>
+          <p class="st-id__name">{{ authStore.user?.name }}</p>
+          <p class="st-id__email">{{ authStore.user?.email }}</p>
+          <span class="st-chip">{{ authStore.isBrand ? 'Brand account' : 'Creator account' }}</span>
         </div>
+      </aside>
 
-        <Transition name="fade">
-          <p v-if="nameSuccess" class="text-sm font-medium text-green-700 bg-green-50 rounded-xl px-4 py-3 mb-4">
-            {{ nameSuccess }}
-          </p>
-        </Transition>
-        <Transition name="fade">
-          <p v-if="nameError" class="text-sm font-medium text-red-600 bg-red-50 rounded-xl px-4 py-3 mb-4">
-            {{ nameError }}
-          </p>
-        </Transition>
+      <div class="st-main">
 
-        <label class="block text-sm font-medium text-gray-700 mb-2">Full name</label>
-        <input
-          v-model="nameForm.name"
-          type="text"
-          placeholder="Your name"
-          class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2"
-          :class="accent.ring"
-          @input="nameSuccess = ''; nameError = ''"
-        />
+        <!-- Profile -->
+        <section class="st-card" aria-labelledby="st-profile">
+          <header class="st-card__head">
+            <h2 id="st-profile" class="st-card__title">Profile</h2>
+            <p class="st-card__desc">How your name appears across AffiliateMY.</p>
+          </header>
 
-        <div class="flex items-center gap-3 mt-4">
-          <button
-            @click="handleUpdateName"
-            :disabled="nameLoading || !nameForm.name.trim()"
-            class="inline-flex items-center gap-2 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            :class="accent.btn"
-          >
-            <span v-if="nameLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            <AppIcon v-else name="check" class="w-4 h-4" />
-            {{ nameLoading ? 'Saving…' : 'Save changes' }}
-          </button>
-          <span class="text-xs text-gray-400">{{ nameForm.name.length }} characters</span>
-        </div>
-      </div>
-    </div>
+          <form class="st-form" @submit.prevent="handleUpdateName">
+            <Transition name="st-fade">
+              <p v-if="nameSuccess" class="st-alert st-alert--ok" role="status">{{ nameSuccess }}</p>
+            </Transition>
+            <Transition name="st-fade">
+              <p v-if="nameError" class="st-alert st-alert--bad" role="alert">{{ nameError }}</p>
+            </Transition>
 
-    <!-- Password -->
-    <div class="bg-white rounded-2xl border border-gray-100">
-      <div class="px-6 py-4 border-b border-gray-100">
-        <h2 class="font-semibold text-gray-900">Password</h2>
-      </div>
-
-      <div class="p-6">
-        <Transition name="fade">
-          <p v-if="passSuccess" class="text-sm font-medium text-green-700 bg-green-50 rounded-xl px-4 py-3 mb-4">
-            {{ passSuccess }}
-          </p>
-        </Transition>
-        <Transition name="fade">
-          <p v-if="passError" class="text-sm font-medium text-red-600 bg-red-50 rounded-xl px-4 py-3 mb-4">
-            {{ passError }}
-          </p>
-        </Transition>
-
-        <label class="block text-sm font-medium text-gray-700 mb-2">Current password</label>
-        <div class="relative mb-4">
-          <input
-            v-model="passwordForm.current_password"
-            :type="showCurrent ? 'text' : 'password'"
-            placeholder="Enter current password"
-            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 pr-11 text-sm focus:outline-none focus:ring-2"
-            :class="accent.ring"
-            @input="passSuccess = ''; passError = ''"
-          />
-          <button
-            type="button"
-            tabindex="-1"
-            @click="showCurrent = !showCurrent"
-            class="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            <AppIcon :name="showCurrent ? 'eye-slash' : 'eye'" class="w-4 h-4" />
-          </button>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">New password</label>
-            <div class="relative">
-              <input
-                v-model="passwordForm.password"
-                :type="showNew ? 'text' : 'password'"
-                placeholder="Min 8 characters"
-                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 pr-11 text-sm focus:outline-none focus:ring-2"
-                :class="accent.ring"
-                @input="passSuccess = ''; passError = ''"
-              />
-              <button
-                type="button"
-                tabindex="-1"
-                @click="showNew = !showNew"
-                class="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <AppIcon :name="showNew ? 'eye-slash' : 'eye'" class="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-2">Confirm new password</label>
-            <div class="relative">
-              <input
-                v-model="passwordForm.password_confirmation"
-                :type="showConfirm ? 'text' : 'password'"
-                placeholder="Repeat new password"
-                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 pr-11 text-sm focus:outline-none focus:ring-2"
-                :class="accent.ring"
-                @input="passSuccess = ''; passError = ''"
-              />
-              <button
-                type="button"
-                tabindex="-1"
-                @click="showConfirm = !showConfirm"
-                class="absolute right-1 top-1/2 -translate-y-1/2 p-2 text-gray-400 hover:text-gray-600 transition-colors"
-              >
-                <AppIcon :name="showConfirm ? 'eye-slash' : 'eye'" class="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div v-if="passwordStrength" class="flex items-center gap-3 mt-3">
-          <div class="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              class="h-full rounded-full transition-all duration-300"
-              :class="passwordStrength.barClass"
-              :style="{ width: `${(passwordStrength.level / 4) * 100}%` }"
+            <label class="st-label" for="st-name">Full name</label>
+            <input
+              id="st-name"
+              v-model="nameForm.name"
+              type="text"
+              placeholder="Your name"
+              autocomplete="name"
+              class="st-input"
+              @input="nameSuccess = ''; nameError = ''"
             />
-          </div>
-          <span class="text-xs font-semibold shrink-0" :class="passwordStrength.textClass">
-            {{ passwordStrength.label }}
-          </span>
-        </div>
 
-        <button
-          @click="handleUpdatePassword"
-          :disabled="passLoading"
-          class="inline-flex items-center gap-2 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-4"
-          :class="accent.btn"
-        >
-          <span v-if="passLoading" class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          <AppIcon v-else name="lock" class="w-4 h-4" />
-          {{ passLoading ? 'Updating…' : 'Update password' }}
-        </button>
+            <div class="st-actions">
+              <button
+                type="submit"
+                :disabled="nameLoading || !nameForm.name.trim() || nameUnchanged"
+                class="st-btn"
+              >
+                <span v-if="nameLoading" class="st-spin" aria-hidden="true" />
+                <AppIcon v-else name="check" class="st-btn__icon" />
+                {{ nameLoading ? 'Saving…' : 'Save changes' }}
+              </button>
+              <span class="st-hint">{{ nameForm.name.length }} characters</span>
+            </div>
+          </form>
+        </section>
+
+        <!-- Password -->
+        <section class="st-card" aria-labelledby="st-password">
+          <header class="st-card__head">
+            <h2 id="st-password" class="st-card__title">Password</h2>
+            <p class="st-card__desc">Use a strong password you don't use anywhere else.</p>
+          </header>
+
+          <form class="st-form" @submit.prevent="handleUpdatePassword">
+            <Transition name="st-fade">
+              <p v-if="passSuccess" class="st-alert st-alert--ok" role="status">{{ passSuccess }}</p>
+            </Transition>
+            <Transition name="st-fade">
+              <p v-if="passError" class="st-alert st-alert--bad" role="alert">{{ passError }}</p>
+            </Transition>
+
+            <label class="st-label" for="st-current">Current password</label>
+            <div class="st-field">
+              <input
+                id="st-current"
+                v-model="passwordForm.current_password"
+                :type="showCurrent ? 'text' : 'password'"
+                placeholder="Enter current password"
+                autocomplete="current-password"
+                class="st-input st-input--toggle"
+                @input="passSuccess = ''; passError = ''"
+              />
+              <button
+                type="button"
+                class="st-eye"
+                :aria-label="showCurrent ? 'Hide current password' : 'Show current password'"
+                :aria-pressed="showCurrent"
+                @click="showCurrent = !showCurrent"
+              >
+                <AppIcon :name="showCurrent ? 'eye-slash' : 'eye'" class="st-eye__icon" />
+              </button>
+            </div>
+
+            <div class="st-pair">
+              <div>
+                <label class="st-label" for="st-new">New password</label>
+                <div class="st-field">
+                  <input
+                    id="st-new"
+                    v-model="passwordForm.password"
+                    :type="showNew ? 'text' : 'password'"
+                    placeholder="Min 8 characters"
+                    autocomplete="new-password"
+                    class="st-input st-input--toggle"
+                    @input="passSuccess = ''; passError = ''"
+                  />
+                  <button
+                    type="button"
+                    class="st-eye"
+                    :aria-label="showNew ? 'Hide new password' : 'Show new password'"
+                    :aria-pressed="showNew"
+                    @click="showNew = !showNew"
+                  >
+                    <AppIcon :name="showNew ? 'eye-slash' : 'eye'" class="st-eye__icon" />
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label class="st-label" for="st-confirm">Confirm new password</label>
+                <div class="st-field">
+                  <input
+                    id="st-confirm"
+                    v-model="passwordForm.password_confirmation"
+                    :type="showConfirm ? 'text' : 'password'"
+                    placeholder="Repeat new password"
+                    autocomplete="new-password"
+                    class="st-input st-input--toggle"
+                    :aria-invalid="matchState === 'mismatch'"
+                    @input="passSuccess = ''; passError = ''"
+                  />
+                  <button
+                    type="button"
+                    class="st-eye"
+                    :aria-label="showConfirm ? 'Hide confirmation' : 'Show confirmation'"
+                    :aria-pressed="showConfirm"
+                    @click="showConfirm = !showConfirm"
+                  >
+                    <AppIcon :name="showConfirm ? 'eye-slash' : 'eye'" class="st-eye__icon" />
+                  </button>
+                </div>
+                <p v-if="matchState" class="st-match" :class="`is-${matchState}`" aria-live="polite">
+                  {{ matchState === 'match' ? 'Passwords match' : "Passwords don't match yet" }}
+                </p>
+              </div>
+            </div>
+
+            <div v-if="passwordStrength" class="st-strength">
+              <div class="st-strength__row">
+                <div class="st-meter" aria-hidden="true">
+                  <span
+                    v-for="n in 4"
+                    :key="n"
+                    class="st-meter__seg"
+                    :class="[n <= Math.max(passwordStrength.level, 1) ? `is-on is-${passwordStrength.tone}` : '']"
+                  />
+                </div>
+                <span class="st-strength__label" :class="`is-${passwordStrength.tone}`">
+                  {{ passwordStrength.label }}
+                </span>
+              </div>
+              <ul class="st-checks" aria-label="Password requirements">
+                <li v-for="c in passwordChecks" :key="c.label" class="st-check" :class="{ 'is-ok': c.ok }">
+                  <AppIcon v-if="c.ok" name="check" class="st-check__icon" />
+                  <span v-else class="st-check__dot" aria-hidden="true" />
+                  {{ c.label }}
+                </li>
+              </ul>
+            </div>
+
+            <div class="st-actions">
+              <button type="submit" :disabled="passLoading" class="st-btn">
+                <span v-if="passLoading" class="st-spin" aria-hidden="true" />
+                <AppIcon v-else name="lock" class="st-btn__icon" />
+                {{ passLoading ? 'Updating…' : 'Update password' }}
+              </button>
+            </div>
+          </form>
+        </section>
+
       </div>
     </div>
-
   </div>
 </template>
 
 <style scoped>
-.fade-enter-active,
-.fade-leave-active {
-  transition: all 0.2s ease;
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+
+/* Hallmark · genre: modern-minimal (app page) · macrostructure: Split Studio (sticky identity card + form column) · theme: existing role scheme (creator green, brand blue, gray neutrals) · enrichment: none
+ * audience: signed-in creators and brands · use: change name, change password · tone: utilitarian, calm
+ * motion: alert fade (opacity/transform) + spinner; reduced-motion removes both transitions
+ * colours are the page's original Tailwind values as OKLCH tokens; filled buttons use green-700 / blue-600 so white text passes AA
+ * pre-emit critique: P4 H4 E4 S4 R5 V4 */
+
+.st-page {
+  --st-ink: oklch(21% 0.034 264.7);
+  --st-ink-2: oklch(44.6% 0.03 256.8);
+  --st-muted: oklch(55.1% 0.027 264.4);
+  --st-faint: oklch(70.7% 0.022 261.3);
+  --st-rule: oklch(92.8% 0.006 264.5);
+  --st-rule-soft: oklch(96.7% 0.003 264.5);
+  --st-paper: oklch(100% 0 0);
+  --st-paper-2: oklch(98.5% 0.002 247.8);
+  --st-red: oklch(63.7% 0.237 25.3);
+  --st-red-ink: oklch(57.7% 0.245 27.3);
+  --st-red-soft: oklch(97.1% 0.013 17.4);
+  --st-amber: oklch(76.9% 0.188 70.1);
+  --st-amber-ink: oklch(55.5% 0.163 48.4);
+  --st-radius: 14px;
+  --st-radius-sm: 10px;
+  --st-ease: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* creator (default) */
+  --st-accent: oklch(72.3% 0.219 149.6);
+  --st-accent-fill: oklch(52.7% 0.154 150.07);
+  --st-accent-fill-hover: oklch(44.8% 0.119 151.3);
+  --st-accent-ink: oklch(52.7% 0.154 150.07);
+  --st-accent-soft: oklch(98.2% 0.018 155.8);
+  --st-accent-tint: oklch(96.2% 0.044 156.7);
+  --st-good: oklch(72.3% 0.219 149.6);
+  --st-strong: oklch(62.7% 0.194 149.2);
+
+  font-family: "Inter", sans-serif;
+  color: var(--st-ink);
+  max-width: 62rem;
+  margin-inline: auto;
+  min-width: 0;
 }
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-  transform: translateY(-4px);
+.st-page[data-role="brand"] {
+  --st-accent: oklch(62.3% 0.214 259.8);
+  --st-accent-fill: oklch(54.6% 0.245 262.9);
+  --st-accent-fill-hover: oklch(48.8% 0.243 264.4);
+  --st-accent-ink: oklch(48.8% 0.243 264.4);
+  --st-accent-soft: oklch(97% 0.014 254.6);
+  --st-accent-tint: oklch(93.2% 0.032 255.6);
+}
+
+.st-page button,
+.st-page input { font-family: inherit; }
+.st-page a:focus-visible,
+.st-page button:focus-visible {
+  outline: 2px solid var(--st-accent);
+  outline-offset: 2px;
+}
+
+/* ── Header ───────────────────────────────────────────────── */
+.st-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--st-muted);
+  text-decoration: none;
+}
+.st-back:hover { color: var(--st-ink); }
+.st-back__icon { width: 1rem; height: 1rem; }
+
+.st-head { margin-bottom: 1.75rem; }
+.st-title {
+  margin: 0;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+.st-sub {
+  margin: 0.35rem 0 0;
+  font-size: 0.9rem;
+  color: var(--st-muted);
+}
+
+/* ── Layout ───────────────────────────────────────────────── */
+.st-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+.st-main { display: grid; gap: 1.25rem; min-width: 0; }
+.st-side { min-width: 0; }
+
+/* ── Identity ─────────────────────────────────────────────── */
+.st-id {
+  display: grid;
+  justify-items: center;
+  gap: 0.2rem;
+  padding: 1.75rem 1.25rem;
+  text-align: center;
+  background: var(--st-paper);
+  border: 1px solid var(--st-rule);
+  border-radius: var(--st-radius);
+}
+.st-avatar {
+  display: grid;
+  place-items: center;
+  width: 5rem;
+  height: 5rem;
+  margin-bottom: 0.6rem;
+  border-radius: 999px;
+  background: var(--st-accent-tint);
+  color: var(--st-accent-ink);
+  font-size: 1.9rem;
+  font-weight: 700;
+}
+.st-id__name {
+  margin: 0;
+  max-width: 100%;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+.st-id__email {
+  margin: 0;
+  max-width: 100%;
+  font-size: 0.825rem;
+  color: var(--st-muted);
+  overflow-wrap: anywhere;
+}
+.st-chip {
+  margin-top: 0.6rem;
+  padding: 0.2rem 0.75rem;
+  border-radius: 999px;
+  background: var(--st-accent-soft);
+  color: var(--st-accent-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* ── Cards ────────────────────────────────────────────────── */
+.st-card {
+  background: var(--st-paper);
+  border: 1px solid var(--st-rule);
+  border-radius: var(--st-radius);
+}
+.st-card__head {
+  padding: 1.25rem 1.5rem 1rem;
+  border-bottom: 1px solid var(--st-rule-soft);
+}
+.st-card__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.st-card__desc {
+  margin: 0.2rem 0 0;
+  font-size: 0.825rem;
+  color: var(--st-muted);
+}
+
+/* ── Forms ────────────────────────────────────────────────── */
+.st-form {
+  display: grid;
+  gap: 0.5rem;
+  padding: 1.25rem 1.5rem 1.5rem;
+}
+.st-label {
+  display: block;
+  margin-top: 0.4rem;
+  margin-bottom: 0.4rem;
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: var(--st-ink-2);
+}
+.st-form > .st-label:first-child,
+.st-alert + .st-label { margin-top: 0; }
+
+.st-field { position: relative; }
+.st-input {
+  width: 100%;
+  padding: 0.7rem 0.95rem;
+  border: 1px solid var(--st-rule);
+  border-radius: var(--st-radius-sm);
+  background: var(--st-paper-2);
+  font-size: 0.9rem;
+  color: var(--st-ink);
+}
+.st-input--toggle { padding-right: 2.9rem; }
+.st-input::placeholder { color: var(--st-faint); }
+.st-input:hover { border-color: var(--st-faint); }
+.st-input:focus {
+  border-color: var(--st-accent);
+  background: var(--st-paper);
+  outline: 2px solid var(--st-accent);
+  outline-offset: 0;
+}
+.st-input[aria-invalid="true"] { border-color: var(--st-red); }
+
+.st-eye {
+  position: absolute;
+  top: 50%;
+  right: 0.3rem;
+  display: grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  transform: translateY(-50%);
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--st-muted);
+  cursor: pointer;
+}
+.st-eye:hover { color: var(--st-ink); background: var(--st-rule-soft); }
+.st-eye__icon { width: 1.1rem; height: 1.1rem; }
+
+.st-pair {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.5rem 1rem;
+}
+.st-pair > div { min-width: 0; }
+
+.st-match { margin: 0.4rem 0 0; font-size: 0.775rem; font-weight: 500; }
+.st-match.is-match { color: var(--st-accent-ink); }
+.st-match.is-mismatch { color: var(--st-red-ink); }
+
+/* ── Strength ─────────────────────────────────────────────── */
+.st-strength { display: grid; gap: 0.7rem; margin-top: 0.5rem; }
+.st-strength__row { display: flex; align-items: center; gap: 0.75rem; }
+.st-meter { flex: 1; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.3rem; }
+.st-meter__seg { height: 0.35rem; border-radius: 999px; background: var(--st-rule-soft); }
+.st-meter__seg.is-bad { background: var(--st-red); }
+.st-meter__seg.is-fair { background: var(--st-amber); }
+.st-meter__seg.is-good { background: var(--st-good); }
+.st-meter__seg.is-strong { background: var(--st-strong); }
+.st-strength__label { flex: none; font-size: 0.775rem; font-weight: 700; }
+.st-strength__label.is-bad { color: var(--st-red-ink); }
+.st-strength__label.is-fair { color: var(--st-amber-ink); }
+.st-strength__label.is-good,
+.st-strength__label.is-strong { color: var(--st-accent-ink); }
+
+.st-checks { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; margin: 0; padding: 0; list-style: none; }
+.st-check { display: inline-flex; align-items: center; gap: 0.4rem; font-size: 0.775rem; color: var(--st-muted); }
+.st-check.is-ok { color: var(--st-accent-ink); font-weight: 500; }
+.st-check__icon { width: 0.85rem; height: 0.85rem; }
+.st-check__dot { width: 0.35rem; height: 0.35rem; margin: 0 0.25rem; border-radius: 999px; background: var(--st-faint); }
+
+/* ── Actions ──────────────────────────────────────────────── */
+.st-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.9rem; }
+.st-hint { font-size: 0.775rem; color: var(--st-muted); }
+
+.st-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.25rem;
+  border: 0;
+  border-radius: var(--st-radius-sm);
+  background: var(--st-accent-fill);
+  color: var(--st-paper);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.st-btn:hover { background: var(--st-accent-fill-hover); }
+.st-btn:active { transform: translateY(1px); }
+.st-btn:disabled { background: var(--st-faint); cursor: not-allowed; }
+.st-btn__icon { width: 1rem; height: 1rem; }
+.st-spin {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid oklch(100% 0 0 / 0.35);
+  border-top-color: var(--st-paper);
+  border-radius: 999px;
+  animation: st-spin 0.7s linear infinite;
+}
+@keyframes st-spin { to { transform: rotate(360deg); } }
+
+/* ── Alerts ───────────────────────────────────────────────── */
+.st-alert { margin: 0 0 0.4rem; padding: 0.7rem 0.95rem; border-radius: var(--st-radius-sm); font-size: 0.85rem; font-weight: 500; }
+.st-alert--ok { background: var(--st-accent-soft); color: var(--st-accent-ink); }
+.st-alert--bad { background: var(--st-red-soft); color: var(--st-red-ink); }
+
+.st-fade-enter-active,
+.st-fade-leave-active { transition: opacity 0.2s var(--st-ease), transform 0.2s var(--st-ease); }
+.st-fade-enter-from,
+.st-fade-leave-to { opacity: 0; transform: translateY(-4px); }
+
+/* ── Wider screens ────────────────────────────────────────── */
+@media (min-width: 40rem) {
+  .st-pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 56rem) {
+  .st-grid { grid-template-columns: 17rem minmax(0, 1fr); gap: 1.5rem; }
+  .st-side { position: sticky; top: 5.5rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-fade-enter-active,
+  .st-fade-leave-active { transition: none; }
+  .st-spin { animation-duration: 2s; }
+  .st-btn:active { transform: none; }
 }
 </style>
