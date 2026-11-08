@@ -1,0 +1,70 @@
+/* Hallmark · genre: modern-minimal · theme: Cobalt (cool engineered paper, electric cobalt, Space Grotesk + Inter + JetBrains Mono)
+ * second accent: marigold (brand side). Axes: light / grotesk-sans / cool */
+:root {
+  --color-paper:      oklch(98.5% 0.004 250);
+  --color-paper-2:    oklch(96% 0.006 252);
+  --color-surface:    oklch(99.5% 0.002 250);
+  --color-rule:       oklch(91% 0.008 252);
+  --color-rule-2:     oklch(83% 0.012 254);
+  --color-muted:      oklch(48% 0.02 256);
+  --color-ink:        oklch(24% 0.02 258);
+  --color-ink-2:      oklch(34% 0.018 257);
+
+  --color-accent:       oklch(58% 0.2 256);
+  --color-accent-hover: oklch(52% 0.2 256);
+  --color-accent-ink:   oklch(99% 0.004 250);
+  --color-accent-soft:  oklch(95.5% 0.03 256);
+  --color-accent-line:  oklch(85% 0.07 256);
+  --color-focus:        oklch(58% 0.2 256);
+
+  /* second accent: marigold marks the brand side, cobalt marks the creator side */
+  --color-accent-2:       oklch(86% 0.15 88);
+  --color-accent-2-hover: oklch(81% 0.15 88);
+  --color-accent-2-ink:   oklch(24% 0.02 258);
+  --color-accent-2-soft:  oklch(96% 0.05 92);
+  --color-accent-2-line:  oklch(86% 0.1 90);
+
+  /* page grid texture (same 40px grid as the sign-up page) */
+  --color-grid:  oklch(24% 0.02 258 / 0.05);
+  --grid-size:   40px;
+
+  /* the one dark graphite band */
+  --color-graphite:       oklch(22% 0.016 260);
+  --color-graphite-ink:   oklch(94% 0.008 252);
+  --color-graphite-muted: oklch(74% 0.02 256);
+  --color-graphite-rule:  oklch(34% 0.02 260);
+
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body:    "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  --space-3xs: 0.25rem;
+  --space-2xs: 0.5rem;
+  --space-xs:  0.75rem;
+  --space-sm:  1rem;
+  --space-md:  1.5rem;
+  --space-lg:  2rem;
+  --space-xl:  3rem;
+  --space-2xl: 4.5rem;
+  --space-3xl: 7rem;
+
+  --text-xs:  0.75rem;
+  --text-sm:  0.9375rem;
+  --text-md:  1.0625rem;
+  --text-lg:  1.25rem;
+  --text-xl:  1.75rem;
+  --text-2xl: clamp(1.875rem, 3.2vw + 0.75rem, 3rem);
+  --text-marquee: clamp(2.5rem, 8.4vw, 8rem);
+
+  --rule-hair: 1px;
+  --radius-btn: 6px;
+  --radius-card: 10px;
+
+  --nav-h: 3.5rem;
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in:  cubic-bezier(0.7, 0, 0.84, 0);
+  --dur-micro: 140ms;
+  --dur-short: 240ms;
+  --dur-long:  640ms;
+}
