@@ -99,9 +99,7 @@ onUnmounted(() => {
       </span>
     </button>
 
-    <Teleport to="body">
-      <div v-if="open" class="fixed inset-0 z-40" @click="open = false" />
-    </Teleport>
+    <div v-if="open" class="fixed inset-0 z-40" @click="open = false" />
 
     <div
       v-if="open"

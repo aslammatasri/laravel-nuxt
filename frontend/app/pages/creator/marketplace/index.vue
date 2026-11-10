@@ -727,9 +727,11 @@ a:focus-visible {
     border-radius: var(--mp-radius);
 }
 .mp-empty__icon {
+    display: block;
+    margin-inline: auto;
     width: 2.5rem;
     height: 2.5rem;
-    color: var(--mp-faint);
+    color: var(--mp-green-ink);
 }
 .mp-empty__title {
     margin-top: 0.75rem;
