@@ -6,7 +6,9 @@ use App\Http\Controllers\Brand\VariationController;
 use App\Http\Controllers\Creator\ProductController as CreatorProductController;
 use App\Http\Controllers\Brand\ApplicationController as BrandApplicationController;
 use App\Http\Controllers\Brand\CreatorController as BrandCreatorController;
+use App\Http\Controllers\Brand\DashboardController as BrandDashboardController;
 use App\Http\Controllers\Creator\ApplicationController as CreatorApplicationController;
+use App\Http\Controllers\Creator\DashboardController as CreatorDashboardController;
 use App\Http\Controllers\Creator\SocialAccountController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
@@ -49,6 +51,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Brand only routes
     Route::middleware('role:brand')->prefix('brand')->group(function () {
+        Route::get('dashboard/stats', [BrandDashboardController::class, 'stats']);
         Route::apiResource('products', BrandProductController::class);
         Route::post('products/{product}/variations',               [VariationController::class, 'store']);
         Route::put('products/{product}/variations/{variation}',    [VariationController::class, 'update']);
@@ -61,6 +64,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Creator only routes
     Route::middleware('role:creator')->prefix('creator')->group(function () {
+        Route::get('dashboard/stats',         [CreatorDashboardController::class, 'stats']);
         Route::get('marketplace',             [CreatorProductController::class, 'index']);
         Route::get('marketplace/categories',  [CreatorProductController::class, 'categories']);
         Route::get('marketplace/{id}',        [CreatorProductController::class, 'show']);

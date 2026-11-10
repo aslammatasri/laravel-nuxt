@@ -73,6 +73,12 @@ function removeOption(vi: number, oi: number) {
     variations.value[vi]!.options.splice(oi, 1);
 }
 
+const hasVariations = ref(false);
+function setHasVariations(v: boolean) {
+    hasVariations.value = v;
+    if (v && !variations.value.length) addVariation();
+}
+
 const categories = [
     "beauty",
     "fashion",
@@ -100,7 +106,7 @@ async function handleSubmit() {
             body,
         });
 
-        for (const v of variations.value) {
+        for (const v of hasVariations.value ? variations.value : []) {
             if (!v.name.trim()) continue;
             const opts = v.options.filter((o) => o.value.trim());
             if (!opts.length) continue;
@@ -326,6 +332,7 @@ async function handleSubmit() {
                     <div class="flex items-center justify-between">
                         <h2 class="font-semibold text-gray-900">Variations</h2>
                         <button
+                            v-if="hasVariations"
                             type="button"
                             @click="addVariation"
                             class="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
@@ -334,16 +341,40 @@ async function handleSubmit() {
                         </button>
                     </div>
 
+                    <div class="flex items-center justify-between gap-4">
+                        <div>
+                            <p class="text-sm font-medium text-gray-900">
+                                This product has variations
+                            </p>
+                            <p class="text-xs text-gray-500 mt-0.5">
+                                Sizes, flavors, pack sizes, etc.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            role="switch"
+                            :aria-checked="hasVariations"
+                            aria-label="This product has variations"
+                            @click="setHasVariations(!hasVariations)"
+                            class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                            :class="hasVariations ? 'bg-blue-600' : 'bg-gray-200'"
+                        >
+                            <span
+                                class="inline-block h-5 w-5 rounded-full bg-white shadow transition-transform"
+                                :class="hasVariations ? 'translate-x-5' : 'translate-x-0.5'"
+                            />
+                        </button>
+                    </div>
+
                     <p
-                        v-if="variations.length === 0"
+                        v-if="!hasVariations"
                         class="text-sm text-gray-400 text-center py-3"
                     >
-                        Optional — add if your product comes in sizes, flavors,
-                        pack sizes, etc.
+                        No variations — sold as a single option.
                     </p>
 
                     <div
-                        v-for="(variation, vi) in variations"
+                        v-for="(variation, vi) in hasVariations ? variations : []"
                         :key="variation._key"
                         class="border border-gray-100 rounded-xl p-4 space-y-3"
                     >

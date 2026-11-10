@@ -26,26 +26,63 @@ const { $api } = useApi();
 const authStore = useAuth();
 
 // ── Fetch stats ────────────────────────────────────────────────
-const { data: products } = await useAsyncData("brand-products", () =>
-    $api<Paginated<Product>>("/brand/products").catch(() => null),
+interface Stats {
+    applications: {
+        total: number;
+        pending: number;
+        approved: number;
+        rejected: number;
+        approval_rate: number | null;
+    };
+    products: { total: number; active: number; inactive: number };
+    top_products: { id: number; name: string; applications: number }[];
+}
+
+const { data: stats } = await useAsyncData("brand-dashboard-stats", () =>
+    $api<Stats>("/brand/dashboard/stats").catch(() => null),
 );
 
 const { data: applications } = await useAsyncData("brand-applications", () =>
     $api<Paginated<Application>>("/brand/applications").catch(() => null),
 );
 
-// ── Computed stats ─────────────────────────────────────────────
-const totalProducts = computed(() => products.value?.data?.length ?? 0);
-const totalApplications = computed(() => applications.value?.data?.length ?? 0);
-const pendingApplications = computed(
+// ── Computed ───────────────────────────────────────────────────
+const appStats = computed(
     () =>
-        applications.value?.data?.filter((a: any) => a.status === "pending")
-            .length ?? 0,
+        stats.value?.applications ?? {
+            total: 0,
+            pending: 0,
+            approved: 0,
+            rejected: 0,
+            approval_rate: null,
+        },
 );
-const approvedApplications = computed(
-    () =>
-        applications.value?.data?.filter((a: any) => a.status === "approved")
-            .length ?? 0,
+const prod = computed(
+    () => stats.value?.products ?? { total: 0, active: 0, inactive: 0 },
+);
+const topProducts = computed(() => stats.value?.top_products ?? []);
+const topMax = computed(() =>
+    Math.max(1, ...topProducts.value.map((p) => p.applications)),
+);
+
+// Donut: three arcs on a circle of circumference 100 (r = 15.9155)
+const donutSegments = computed(() => {
+    const total = appStats.value.total;
+    const parts = [
+        { key: "approved", label: "Approved", value: appStats.value.approved, color: "#22c55e" },
+        { key: "pending", label: "Pending", value: appStats.value.pending, color: "#eab308" },
+        { key: "rejected", label: "Rejected", value: appStats.value.rejected, color: "#ef4444" },
+    ];
+    let offset = 0;
+    return parts.map((p) => {
+        const pct = total ? (p.value / total) * 100 : 0;
+        const seg = { ...p, pct, dash: `${pct} ${100 - pct}`, offset: -offset };
+        offset += pct;
+        return seg;
+    });
+});
+const activePct = computed(() =>
+    prod.value.total ? (prod.value.active / prod.value.total) * 100 : 0,
 );
 </script>
 
@@ -62,61 +99,113 @@ const approvedApplications = computed(
         </div>
 
         <!-- Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
-            <div class="bg-white rounded-2xl p-6 border border-gray-100">
-                <p class="text-sm text-gray-500 mb-1">Total Products</p>
-                <p class="text-3xl font-bold text-gray-900">
-                    {{ totalProducts }}
-                </p>
-                <NuxtLink
-                    to="/brand/products"
-                    class="text-xs text-blue-600 hover:underline mt-2 block"
-                >
-                    Manage products →
-                </NuxtLink>
-            </div>
-
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
             <div class="bg-white rounded-2xl p-6 border border-gray-100">
                 <p class="text-sm text-gray-500 mb-1">Total Applications</p>
-                <p class="text-3xl font-bold text-gray-900">
-                    {{ totalApplications }}
-                </p>
-                <NuxtLink
-                    to="/brand/applications"
-                    class="text-xs text-blue-600 hover:underline mt-2 block"
-                >
+                <p class="text-3xl font-bold text-gray-900">{{ appStats.total }}</p>
+                <NuxtLink to="/brand/applications" class="text-xs text-blue-600 hover:underline mt-2 block">
                     View all →
                 </NuxtLink>
             </div>
-
-            <div
-                class="bg-white rounded-2xl p-6 border border-yellow-100 bg-yellow-50"
-            >
+            <div class="rounded-2xl p-6 border border-yellow-100 bg-yellow-50">
                 <p class="text-sm text-yellow-700 mb-1">Pending Review</p>
-                <p class="text-3xl font-bold text-yellow-800">
-                    {{ pendingApplications }}
-                </p>
-                <NuxtLink
-                    to="/brand/applications?status=pending"
-                    class="text-xs text-yellow-700 hover:underline mt-2 block"
-                >
+                <p class="text-3xl font-bold text-yellow-800">{{ appStats.pending }}</p>
+                <NuxtLink to="/brand/applications?status=pending" class="text-xs text-yellow-700 hover:underline mt-2 block">
                     Review now →
                 </NuxtLink>
             </div>
-
-            <div
-                class="bg-white rounded-2xl p-6 border border-green-100 bg-green-50"
-            >
-                <p class="text-sm text-green-700 mb-1">Active Creators</p>
-                <p class="text-3xl font-bold text-green-800">
-                    {{ approvedApplications }}
-                </p>
-                <NuxtLink
-                    to="/brand/applications?status=approved"
-                    class="text-xs text-green-700 hover:underline mt-2 block"
-                >
+            <div class="rounded-2xl p-6 border border-green-100 bg-green-50">
+                <p class="text-sm text-green-700 mb-1">Approved</p>
+                <p class="text-3xl font-bold text-green-800">{{ appStats.approved }}</p>
+                <NuxtLink to="/brand/applications?status=approved" class="text-xs text-green-700 hover:underline mt-2 block">
                     View creators →
                 </NuxtLink>
+            </div>
+            <div class="rounded-2xl p-6 border border-red-100 bg-red-50">
+                <p class="text-sm text-red-700 mb-1">Rejected</p>
+                <p class="text-3xl font-bold text-red-800">{{ appStats.rejected }}</p>
+                <NuxtLink to="/brand/applications?status=rejected" class="text-xs text-red-700 hover:underline mt-2 block">
+                    View rejected →
+                </NuxtLink>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
+            <!-- Application outcomes donut -->
+            <div class="bg-white rounded-2xl border border-gray-100 p-6">
+                <h2 class="font-semibold text-gray-900 mb-4">Application Outcomes</h2>
+                <div class="flex items-center gap-6">
+                    <div class="relative w-32 h-32 shrink-0">
+                        <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
+                            <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#f3f4f6" stroke-width="4" />
+                            <circle
+                                v-for="seg in donutSegments"
+                                :key="seg.key"
+                                v-show="seg.pct > 0"
+                                cx="18" cy="18" r="15.9155" fill="none"
+                                :stroke="seg.color" stroke-width="4"
+                                :stroke-dasharray="seg.dash"
+                                :stroke-dashoffset="seg.offset"
+                            />
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center">
+                            <span class="text-xl font-bold text-gray-900">
+                                {{ appStats.approval_rate === null ? "–" : appStats.approval_rate + "%" }}
+                            </span>
+                            <span class="text-[11px] text-gray-400">approval rate</span>
+                        </div>
+                    </div>
+                    <ul class="space-y-2 text-sm">
+                        <li v-for="seg in donutSegments" :key="seg.key" class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-full" :style="{ background: seg.color }" />
+                            <span class="text-gray-600">{{ seg.label }}</span>
+                            <span class="font-semibold text-gray-900 ml-auto pl-3">{{ seg.value }}</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Products active vs inactive -->
+            <div class="bg-white rounded-2xl border border-gray-100 p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-semibold text-gray-900">Products</h2>
+                    <NuxtLink to="/brand/products" class="text-sm text-blue-600 hover:underline">Manage</NuxtLink>
+                </div>
+                <p class="text-3xl font-bold text-gray-900">{{ prod.total }}</p>
+                <p class="text-sm text-gray-500 mb-4">total products</p>
+                <div class="h-3 w-full rounded-full bg-gray-100 overflow-hidden flex">
+                    <div class="h-full bg-blue-500 transition-all" :style="{ width: activePct + '%' }" />
+                </div>
+                <div class="flex justify-between text-sm mt-3">
+                    <span class="flex items-center gap-2 text-gray-600">
+                        <span class="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                        Active <b class="text-gray-900">{{ prod.active }}</b>
+                    </span>
+                    <span class="flex items-center gap-2 text-gray-600">
+                        <span class="w-2.5 h-2.5 rounded-full bg-gray-200" />
+                        Inactive <b class="text-gray-900">{{ prod.inactive }}</b>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Top products -->
+            <div class="bg-white rounded-2xl border border-gray-100 p-6">
+                <h2 class="font-semibold text-gray-900 mb-4">Most Applied Products</h2>
+                <p v-if="!topProducts.length" class="text-sm text-gray-400 py-6 text-center">
+                    No applications yet
+                </p>
+                <ul v-else class="space-y-3">
+                    <li v-for="p in topProducts" :key="p.id">
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="text-gray-700 truncate pr-3">{{ p.name }}</span>
+                            <span class="font-semibold text-gray-900">{{ p.applications }}</span>
+                        </div>
+                        <div class="h-2 rounded-full bg-gray-100 overflow-hidden">
+                            <div class="h-full bg-blue-500 rounded-full" :style="{ width: (p.applications / topMax) * 100 + '%' }" />
+                        </div>
+                    </li>
+                </ul>
             </div>
         </div>
 
