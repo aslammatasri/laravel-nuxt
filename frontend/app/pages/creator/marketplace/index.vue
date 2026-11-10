@@ -298,9 +298,7 @@ const commissionTier = (rate: number | string) => {
 
         <!-- Empty state -->
         <div v-if="!products?.data?.length" class="mp-empty">
-            <svg class="mp-empty__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true">
-                <path d="M4 8.5 12 4l8 4.5v7L12 20l-8-4.5v-7Z" stroke-linejoin="round" /><path d="m4 8.5 8 4.5 8-4.5M12 13v7" stroke-linejoin="round" />
-            </svg>
+            <div class="mp-empty__icon"><AppIcon name="marketplace" /></div>
             <p class="mp-empty__title">No products found</p>
             <p class="mp-empty__desc">Try a different search or loosen your filters.</p>
             <button v-if="hasActiveFilters" type="button" class="mp-empty__btn" @click="resetAll">
@@ -727,11 +725,15 @@ a:focus-visible {
     border-radius: var(--mp-radius);
 }
 .mp-empty__icon {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.5rem;
+    height: 3.5rem;
     margin-inline: auto;
-    width: 2.5rem;
-    height: 2.5rem;
-    color: var(--mp-green-ink);
+    border-radius: 9999px;
+    background: #f0fdf4;
+    color: #22c55e;
 }
 .mp-empty__title {
     margin-top: 0.75rem;
