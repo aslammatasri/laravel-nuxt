@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Creator;
 
 use App\Http\Controllers\Controller;
+use App\Models\ProductApplication;
 use App\Services\ProductService;
 use Illuminate\Http\Request;
 
@@ -21,6 +22,15 @@ class ProductController extends Controller
         ]);
         $products = $this->productService->getMarketplaceProducts($filters);
 
+        // Latest application status per product for this creator
+        $statuses = ProductApplication::where('creator_id', $request->user()->id)
+            ->whereIn('product_id', $products->pluck('id'))
+            ->orderBy('id')
+            ->pluck('status', 'product_id'); // later rows overwrite earlier ones
+        $products->getCollection()->each(
+            fn ($p) => $p->setAttribute('my_application_status', $statuses[$p->id]?->value ?? null)
+        );
+
         return response()->json($products);
     }
 
@@ -31,9 +41,16 @@ class ProductController extends Controller
         );
     }
 
-    public function show(int $id)
+    public function show(int $id, Request $request)
     {
         $product = $this->productService->getProductDetail($id);
+
+        // Latest application by this creator, so the UI can block re-applying
+        $latest = ProductApplication::where('creator_id', $request->user()->id)
+            ->where('product_id', $id)
+            ->latest('id')
+            ->value('status');
+        $product->setAttribute('my_application_status', $latest?->value);
 
         return response()->json($product);
     }

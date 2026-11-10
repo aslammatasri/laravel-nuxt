@@ -48,6 +48,7 @@ interface Product {
     spots_left: number;
     brand: { name: string };
     variations: Variation[];
+    my_application_status: 'pending' | 'approved' | 'rejected' | null;
 }
 
 const config = useRuntimeConfig();
@@ -55,6 +56,10 @@ const config = useRuntimeConfig();
 const { data: product } = await useAsyncData(
     `marketplace-product-${productId}`,
     () => $api<Product>(`/creator/marketplace/${productId}`).catch(() => null),
+);
+
+const hasActiveApplication = computed(() =>
+    ['pending', 'approved'].includes(product.value?.my_application_status ?? ''),
 );
 
 const commissionLabel = computed(() => {
@@ -230,11 +235,33 @@ async function handleApply() {
                         <NuxtLink to="/creator/marketplace" class="pd-btn pd-btn--ghost">Browse more</NuxtLink>
                     </div>
 
+                    <!-- Already applied (pending / approved) -->
+                    <div v-else-if="hasActiveApplication" class="pd-success">
+                        <span class="pd-success__icon" aria-hidden="true">
+                            <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="m5 10.5 3.5 3.5L15 6.5" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                        </span>
+                        <h2 class="pd-success__title">
+                            {{ product?.my_application_status === "approved" ? "Application approved" : "Application pending" }}
+                        </h2>
+                        <p class="pd-success__text">
+                            {{
+                                product?.my_application_status === "approved"
+                                    ? "You are approved to promote this product."
+                                    : "You already applied. The brand is reviewing your application."
+                            }}
+                        </p>
+                        <NuxtLink to="/creator/applications" class="pd-btn">View my applications</NuxtLink>
+                    </div>
+
                     <!-- Apply -->
                     <form v-else class="pd-form" @submit.prevent="handleApply">
                         <h2 class="pd-h2">Apply to promote</h2>
                         <p class="pd-form__hint">
                             Tell the brand why you are the right creator for this product.
+                        </p>
+
+                        <p v-if="product?.my_application_status === 'rejected'" class="pd-form__hint">
+                            Your previous application was rejected. You can apply again.
                         </p>
 
                         <div v-if="error" class="pd-error" role="alert">{{ error }}</div>
