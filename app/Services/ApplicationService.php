@@ -3,10 +3,12 @@
 namespace App\Services;
 
 use App\Enums\ApplicationStatus;
+use App\Models\Product;
 use App\Notifications\ApplicationStatusUpdated;
 use App\Notifications\NewApplicationReceived;
 use App\Repositories\Contracts\ApplicationRepositoryInterface;
 use App\Repositories\Contracts\ProductRepositoryInterface;
+use Illuminate\Support\Facades\DB;
 
 class ApplicationService
 {
@@ -27,31 +29,34 @@ class ApplicationService
 
     public function applyToProduct(int $creatorId, int $productId, string $pitch)
     {
-        // Business rule 1 — product must exist and be active
-        $product = $this->productRepository->findById($productId);
+        $application = DB::transaction(function () use ($creatorId, $productId, $pitch) {
+            // Lock the product row so concurrent submits are serialized
+            $product = Product::whereKey($productId)->lockForUpdate()->firstOrFail();
 
-        if ($product->status !== 'active') {
-            throw new \Exception('This product is no longer accepting applications', 422);
-        }
+            // Business rule 1 — product must be active
+            if ($product->status !== 'active') {
+                throw new \Exception('This product is no longer accepting applications', 422);
+            }
 
-        // Business rule 2 — creator cannot apply twice
-        if ($this->applicationRepository->creatorAlreadyApplied($creatorId, $productId)) {
-            throw new \Exception('You have already applied to this product', 422);
-        }
+            // Business rule 2 — no new application while one is pending or approved
+            if ($this->applicationRepository->creatorAlreadyApplied($creatorId, $productId)) {
+                throw new \Exception('You have already applied to this product', 422);
+            }
 
-        // Business rule 3 — check max affiliates not exceeded
-        if ($product->spots_left !== null && $product->spots_left <= 0) {
-            throw new \Exception('This product has reached its maximum affiliates', 422);
-        }
+            // Business rule 3 — check max affiliates not exceeded
+            if ($product->spots_left !== null && $product->spots_left <= 0) {
+                throw new \Exception('This product has reached its maximum affiliates', 422);
+            }
 
-        $application = $this->applicationRepository->create([
-            'creator_id'    => $creatorId,
-            'product_id'    => $productId,
-            'pitch_message' => $pitch,
-            'status'        => ApplicationStatus::PENDING,
-        ]);
+            return $this->applicationRepository->create([
+                'creator_id'    => $creatorId,
+                'product_id'    => $productId,
+                'pitch_message' => $pitch,
+                'status'        => ApplicationStatus::PENDING,
+            ]);
+        });
 
-        $product->brand->notify(new NewApplicationReceived($application->load(['creator', 'product'])));
+        $application->product->brand->notify(new NewApplicationReceived($application->load(['creator', 'product'])));
 
         return $application;
     }

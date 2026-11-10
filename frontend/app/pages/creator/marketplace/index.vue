@@ -15,6 +15,7 @@ interface Product {
     commission_rate: string | number;
     commission_type: string;
     brand: { name: string };
+    my_application_status: 'pending' | 'approved' | 'rejected' | null;
 }
 
 const config = useRuntimeConfig();
@@ -349,7 +350,15 @@ const commissionTier = (rate: number | string) => {
                         </div>
                     </dl>
 
-                    <span class="mp-card__cta" aria-hidden="true">
+                    <span
+                        v-if="product.my_application_status === 'pending' || product.my_application_status === 'approved'"
+                        class="mp-card__cta mp-card__cta--applied"
+                        :class="`is-${product.my_application_status}`"
+                        aria-hidden="true"
+                    >
+                        {{ product.my_application_status === "approved" ? "Approved" : "Applied · Pending" }}
+                    </span>
+                    <span v-else class="mp-card__cta" aria-hidden="true">
                         View &amp; apply
                         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10h11m-4-4 4 4-4 4" stroke-linecap="round" stroke-linejoin="round" /></svg>
                     </span>
@@ -917,6 +926,14 @@ a:focus-visible {
     font-size: 0.85rem;
     font-weight: 600;
     color: #fff;
+}
+.mp-card__cta--applied {
+    background: #fefce8;
+    color: #a16207;
+}
+.mp-card__cta--applied.is-approved {
+    background: #f0fdf4;
+    color: #15803d;
 }
 .mp-card__cta svg {
     width: 1rem;
