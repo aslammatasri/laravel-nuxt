@@ -8,8 +8,10 @@ use App\Http\Controllers\Brand\ApplicationController as BrandApplicationControll
 use App\Http\Controllers\Brand\CreatorController as BrandCreatorController;
 use App\Http\Controllers\Brand\DashboardController as BrandDashboardController;
 use App\Http\Controllers\Creator\ApplicationController as CreatorApplicationController;
+use App\Http\Controllers\Creator\CollaborationController;
 use App\Http\Controllers\Creator\DashboardController as CreatorDashboardController;
 use App\Http\Controllers\Creator\SocialAccountController;
+use App\Http\Controllers\ConversationController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
@@ -49,6 +51,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('read-all',   [NotificationController::class, 'markAllAsRead']);
     });
 
+    // Messages (shared by both roles)
+    Route::prefix('conversations')->group(function () {
+        Route::get('/',                 [ConversationController::class, 'index']);
+        Route::post('/',                [ConversationController::class, 'store']);
+        Route::get('unread-count',      [ConversationController::class, 'unreadCount']);
+        Route::get('{id}/messages',     [ConversationController::class, 'messages']);
+        Route::post('{id}/messages',    [ConversationController::class, 'send']);
+        Route::patch('{id}/read',       [ConversationController::class, 'markRead']);
+    });
+
     // Brand only routes
     Route::middleware('role:brand')->prefix('brand')->group(function () {
         Route::get('dashboard/stats', [BrandDashboardController::class, 'stats']);
@@ -70,6 +82,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('marketplace/{id}',        [CreatorProductController::class, 'show']);
         Route::post('products/{id}/apply',    [CreatorApplicationController::class, 'store']);
         Route::get('applications',            [CreatorApplicationController::class, 'index']);
+        Route::get('collaborations',          [CollaborationController::class, 'index']);
         Route::get('social-accounts',            [SocialAccountController::class, 'index']);
         Route::post('social-accounts/youtube',   [SocialAccountController::class, 'store']);
         Route::post('social-accounts/{id}/sync', [SocialAccountController::class, 'sync']);
