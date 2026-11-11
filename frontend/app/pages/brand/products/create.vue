@@ -12,16 +12,28 @@ const loading = ref(false);
 const imageFiles = ref<File[]>([]);
 const imagePreviews = ref<string[]>([]);
 
+const fieldErrors = reactive<Record<string, string>>({});
+const imageProblems = ref<string[]>([]);
+const createdProductId = ref<number | null>(null);
+
 function onImagesChange(e: Event) {
-    const files = Array.from((e.target as HTMLInputElement).files || []);
-    imageFiles.value.push(...files);
-    files.forEach((f) => imagePreviews.value.push(URL.createObjectURL(f)));
+    const input = e.target as HTMLInputElement;
+    const picked = Array.from(input.files || []);
+    const existing = imageFiles.value.reduce((n, f) => n + f.size, 0);
+    const { accepted, problems } = checkImageFiles(picked, existing);
+
+    imageProblems.value = problems;
+    delete fieldErrors.images;
+    imageFiles.value.push(...accepted);
+    accepted.forEach((f) => imagePreviews.value.push(URL.createObjectURL(f)));
+    input.value = ""; // allow picking the same file again after fixing it
 }
 
 function removeImageAt(index: number) {
     URL.revokeObjectURL(imagePreviews.value[index] ?? "");
     imagePreviews.value.splice(index, 1);
     imageFiles.value.splice(index, 1);
+    imageProblems.value = [];
 }
 
 const form = reactive({
@@ -90,27 +102,77 @@ const categories = [
     "sports",
 ];
 
-async function handleSubmit() {
-    loading.value = true;
-    error.value = null;
+// Clear a field's error as soon as the user edits it
+watch(
+    () => ({ ...form }),
+    (now, before) => {
+        for (const k of Object.keys(now) as (keyof typeof now)[]) {
+            if (now[k] !== before[k]) delete fieldErrors[k];
+        }
+    },
+);
 
-    try {
-        const body = new FormData();
-        Object.entries(form).forEach(([k, v]) => {
-            if (v !== "") body.append(k, v as string);
-        });
-        imageFiles.value.forEach((f) => body.append("images[]", f));
+const variationError = ref<string | null>(null);
 
-        const product = await $api<{ id: number }>("/brand/products", {
-            method: "POST",
-            body,
-        });
+function validate(): boolean {
+    Object.keys(fieldErrors).forEach((k) => delete fieldErrors[k]);
+    variationError.value = null;
 
-        for (const v of hasVariations.value ? variations.value : []) {
-            if (!v.name.trim()) continue;
-            const opts = v.options.filter((o) => o.value.trim());
-            if (!opts.length) continue;
-            await $api(`/brand/products/${product.id}/variations`, {
+    if (!form.name.trim()) fieldErrors.name = "Enter a product name.";
+    if (!form.description.trim()) fieldErrors.description = "Add a short description.";
+
+    if (form.price === "") fieldErrors.price = "Enter the product price.";
+    else if (Number(form.price) < 0) fieldErrors.price = "Price cannot be negative.";
+
+    if (!form.category) fieldErrors.category = "Choose a category.";
+
+    if (form.commission_rate === "") fieldErrors.commission_rate = "Enter the commission rate.";
+    else if (Number(form.commission_rate) < 0) fieldErrors.commission_rate = "Commission cannot be negative.";
+    else if (form.commission_type === "percentage" && Number(form.commission_rate) > 100)
+        fieldErrors.commission_rate = "A percentage commission cannot be more than 100.";
+
+    if (!form.campaign_start) fieldErrors.campaign_start = "Choose a valid start date (dd/mm/yyyy).";
+    if (!form.campaign_end) fieldErrors.campaign_end = "Choose a valid end date (dd/mm/yyyy).";
+    else if (form.campaign_start && form.campaign_end <= form.campaign_start)
+        fieldErrors.campaign_end = "End date must be after the start date.";
+
+    if (form.max_affiliates !== "") {
+        const n = Number(form.max_affiliates);
+        if (!Number.isInteger(n) || n < 1) fieldErrors.max_affiliates = "Use a whole number of 1 or more, or leave empty for unlimited.";
+    }
+
+    if (hasVariations.value) {
+        for (const v of variations.value) {
+            const filled = v.options.filter((o) => o.value.trim());
+            if (!v.name.trim() && !filled.length) continue; // untouched row, ignored on save
+            if (!v.name.trim()) {
+                variationError.value = "Give every variation a name (for example Size).";
+                break;
+            }
+            if (!filled.length) {
+                variationError.value = `Add at least one option to "${v.name}".`;
+                break;
+            }
+        }
+    }
+
+    return !Object.keys(fieldErrors).length && !variationError.value;
+}
+
+function scrollToFirstError() {
+    nextTick(() => {
+        const el = document.querySelector<HTMLElement>('[aria-invalid="true"], [data-error]');
+        el?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+}
+
+async function saveVariations(productId: number) {
+    for (const v of hasVariations.value ? variations.value : []) {
+        if (!v.name.trim()) continue;
+        const opts = v.options.filter((o) => o.value.trim());
+        if (!opts.length) continue;
+        try {
+            await $api(`/brand/products/${productId}/variations`, {
                 method: "POST",
                 body: {
                     name: v.name,
@@ -120,11 +182,57 @@ async function handleSubmit() {
                     })),
                 },
             });
+        } catch (err: any) {
+            const parsed = parseApiError(err);
+            throw new Error(
+                `Variation "${v.name}" could not be saved: ${parsed.all[0] || parsed.message}`,
+            );
+        }
+        // Don't re-send on a retry
+        variations.value = variations.value.filter((x) => x !== v);
+    }
+}
+
+async function handleSubmit() {
+    error.value = null;
+    imageProblems.value = [];
+
+    if (!validate()) {
+        error.value = "Please fix the highlighted fields.";
+        scrollToFirstError();
+        return;
+    }
+
+    loading.value = true;
+
+    try {
+        // On a retry the product already exists: only the variations are left
+        if (createdProductId.value === null) {
+            const body = new FormData();
+            Object.entries(form).forEach(([k, v]) => {
+                if (v !== "") body.append(k, v as string);
+            });
+            imageFiles.value.forEach((f) => body.append("images[]", f));
+
+            const product = await $api<{ id: number }>("/brand/products", {
+                method: "POST",
+                body,
+            });
+            createdProductId.value = product.id;
         }
 
+        await saveVariations(createdProductId.value);
         await router.push("/brand/products");
     } catch (err: any) {
-        error.value = err?.data?.message || "Failed to create product";
+        if (createdProductId.value !== null) {
+            // Product exists, a variation failed
+            error.value = `Your product was created, but ${err?.message ?? "a variation failed"}. Fix it and press the button again, or finish later by editing the product.`;
+        } else {
+            const parsed = parseApiError(err, "Failed to create product");
+            Object.assign(fieldErrors, parsed.fields);
+            error.value = parsed.message;
+            scrollToFirstError();
+        }
     } finally {
         loading.value = false;
     }
@@ -152,8 +260,16 @@ async function handleSubmit() {
         <div
             v-if="error"
             class="bg-red-50 text-red-600 text-sm rounded-xl p-4 mb-6"
+            role="alert"
+            data-error
         >
             {{ error }}
+            <ul
+                v-if="Object.keys(fieldErrors).length"
+                class="list-disc pl-5 mt-2 space-y-0.5"
+            >
+                <li v-for="(msg, key) in fieldErrors" :key="key">{{ msg }}</li>
+            </ul>
         </div>
 
         <div class="grid grid-cols-3 gap-6">
@@ -218,7 +334,7 @@ async function handleSubmit() {
                                 >Click to upload images</span
                             >
                             <span class="text-xs text-gray-400 mt-1"
-                                >PNG, JPG, WEBP — max 2MB each</span
+                                >PNG, JPG or WEBP — max 2 MB each</span
                             >
                             <input
                                 type="file"
@@ -230,6 +346,11 @@ async function handleSubmit() {
                         </label>
                     </div>
 
+                    <div v-if="imageProblems.length || fieldErrors.images" class="-mt-2 space-y-1" role="alert" data-error>
+                        <p v-for="p in imageProblems" :key="p" class="text-xs text-red-500">{{ p }}</p>
+                        <p v-if="fieldErrors.images" class="text-xs text-red-500">{{ fieldErrors.images }}</p>
+                    </div>
+
                     <div>
                         <label
                             class="block text-sm font-medium text-gray-700 mb-1"
@@ -239,8 +360,11 @@ async function handleSubmit() {
                             v-model="form.name"
                             type="text"
                             placeholder="e.g. Skintific Sunscreen SPF50"
+                            :aria-invalid="fieldErrors.name ? 'true' : undefined"
                             class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            :class="{ 'border-red-300! focus:ring-red-400!': fieldErrors.name }"
                         />
+                        <p v-if="fieldErrors.name" class="text-xs text-red-500 mt-1">{{ fieldErrors.name }}</p>
                     </div>
 
                     <div>
@@ -252,8 +376,11 @@ async function handleSubmit() {
                             v-model="form.description"
                             rows="5"
                             placeholder="Describe your product and what creators should highlight..."
+                            :aria-invalid="fieldErrors.description ? 'true' : undefined"
                             class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                            :class="{ 'border-red-300! focus:ring-red-400!': fieldErrors.description }"
                         />
+                        <p v-if="fieldErrors.description" class="text-xs text-red-500 mt-1">{{ fieldErrors.description }}</p>
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
@@ -262,12 +389,11 @@ async function handleSubmit() {
                                 class="block text-sm font-medium text-gray-700 mb-1"
                                 >Price (RM)</label
                             >
-                            <input
+                            <CurrencyInput
                                 v-model="form.price"
-                                type="number"
-                                placeholder="0.00"
-                                class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                :invalid="!!fieldErrors.price"
                             />
+                            <p v-if="fieldErrors.price" class="text-xs text-red-500 mt-1">{{ fieldErrors.price }}</p>
                         </div>
                         <div>
                             <label
@@ -276,7 +402,9 @@ async function handleSubmit() {
                             >
                             <select
                                 v-model="form.category"
+                                :aria-invalid="fieldErrors.category ? 'true' : undefined"
                                 class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                :class="{ 'border-red-300! focus:ring-red-400!': fieldErrors.category }"
                             >
                                 <option value="">Select category</option>
                                 <option
@@ -290,6 +418,7 @@ async function handleSubmit() {
                                     }}
                                 </option>
                             </select>
+                            <p v-if="fieldErrors.category" class="text-xs text-red-500 mt-1">{{ fieldErrors.category }}</p>
                         </div>
                     </div>
                 </div>
@@ -305,22 +434,22 @@ async function handleSubmit() {
                                 class="block text-sm font-medium text-gray-700 mb-1"
                                 >Start Date</label
                             >
-                            <input
+                            <DateInput
                                 v-model="form.campaign_start"
-                                type="date"
-                                class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                :invalid="!!fieldErrors.campaign_start"
                             />
+                            <p v-if="fieldErrors.campaign_start" class="text-xs text-red-500 mt-1">{{ fieldErrors.campaign_start }}</p>
                         </div>
                         <div>
                             <label
                                 class="block text-sm font-medium text-gray-700 mb-1"
                                 >End Date</label
                             >
-                            <input
+                            <DateInput
                                 v-model="form.campaign_end"
-                                type="date"
-                                class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                :invalid="!!fieldErrors.campaign_end"
                             />
+                            <p v-if="fieldErrors.campaign_end" class="text-xs text-red-500 mt-1">{{ fieldErrors.campaign_end }}</p>
                         </div>
                     </div>
                 </div>
@@ -373,6 +502,8 @@ async function handleSubmit() {
                         No variations — sold as a single option.
                     </p>
 
+                    <p v-if="variationError" class="text-xs text-red-500" role="alert" data-error>{{ variationError }}</p>
+
                     <div
                         v-for="(variation, vi) in hasVariations ? variations : []"
                         :key="variation._key"
@@ -406,18 +537,8 @@ async function handleSubmit() {
                                     placeholder="Option (e.g. Small)"
                                     class="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
-                                <div class="relative">
-                                    <span
-                                        class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"
-                                        >RM</span
-                                    >
-                                    <input
-                                        v-model="option.price"
-                                        type="number"
-                                        min="0"
-                                        placeholder="0.00"
-                                        class="w-28 border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
+                                <div class="w-32">
+                                    <CurrencyInput v-model="option.price" compact />
                                 </div>
                                 <button
                                     type="button"
@@ -456,9 +577,13 @@ async function handleSubmit() {
                         <input
                             v-model="form.commission_rate"
                             type="number"
+                            min="0"
                             placeholder="10"
+                            :aria-invalid="fieldErrors.commission_rate ? 'true' : undefined"
                             class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            :class="{ 'border-red-300! focus:ring-red-400!': fieldErrors.commission_rate }"
                         />
+                        <p v-if="fieldErrors.commission_rate" class="text-xs text-red-500 mt-1">{{ fieldErrors.commission_rate }}</p>
                     </div>
                     <div>
                         <label
@@ -492,9 +617,13 @@ async function handleSubmit() {
                         <input
                             v-model="form.max_affiliates"
                             type="number"
+                            min="1"
                             placeholder="Unlimited"
+                            :aria-invalid="fieldErrors.max_affiliates ? 'true' : undefined"
                             class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            :class="{ 'border-red-300! focus:ring-red-400!': fieldErrors.max_affiliates }"
                         />
+                        <p v-if="fieldErrors.max_affiliates" class="text-xs text-red-500 mt-1">{{ fieldErrors.max_affiliates }}</p>
                     </div>
                 </div>
 

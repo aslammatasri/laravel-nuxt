@@ -73,10 +73,18 @@ const existingImageUrls = computed(() =>
     existingImages.value.map((p) => `${config.public.storageBase}/${p}`),
 );
 
+const imageProblems = ref<string[]>([]);
+
 function onImagesChange(e: Event) {
-    const files = Array.from((e.target as HTMLInputElement).files || []);
-    imageFiles.value.push(...files);
-    files.forEach((f) => imagePreviews.value.push(URL.createObjectURL(f)));
+    const input = e.target as HTMLInputElement;
+    const picked = Array.from(input.files || []);
+    const existing = imageFiles.value.reduce((n, f) => n + f.size, 0);
+    const { accepted, problems } = checkImageFiles(picked, existing);
+
+    imageProblems.value = problems;
+    imageFiles.value.push(...accepted);
+    accepted.forEach((f) => imagePreviews.value.push(URL.createObjectURL(f)));
+    input.value = "";
 }
 
 function removeNewImageAt(index: number) {
@@ -161,6 +169,7 @@ const categories = [
 async function handleSubmit() {
     loading.value = true;
     error.value = null;
+    imageProblems.value = [];
 
     try {
         const body = new FormData();
@@ -216,7 +225,8 @@ async function handleSubmit() {
 
         await router.push("/brand/products");
     } catch (err: any) {
-        error.value = err?.data?.message || "Failed to update product";
+        const parsed = parseApiError(err, "Failed to update product");
+        error.value = [parsed.message, ...parsed.all].join(" ");
     } finally {
         loading.value = false;
     }
@@ -331,6 +341,10 @@ async function handleSubmit() {
                         </label>
                     </div>
 
+                    <div v-if="imageProblems.length" class="-mt-2 space-y-1" role="alert">
+                        <p v-for="p in imageProblems" :key="p" class="text-xs text-red-500">{{ p }}</p>
+                    </div>
+
                     <div>
                         <label
                             class="block text-sm font-medium text-gray-700 mb-1"
@@ -363,12 +377,7 @@ async function handleSubmit() {
                                 class="block text-sm font-medium text-gray-700 mb-1"
                                 >Price (RM)</label
                             >
-                            <input
-                                v-model="form.price"
-                                type="number"
-                                placeholder="0.00"
-                                class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
+                            <CurrencyInput v-model="form.price" />
                         </div>
                         <div>
                             <label
@@ -406,22 +415,14 @@ async function handleSubmit() {
                                 class="block text-sm font-medium text-gray-700 mb-1"
                                 >Start Date</label
                             >
-                            <input
-                                v-model="form.campaign_start"
-                                type="date"
-                                class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
+                            <DateInput v-model="form.campaign_start" />
                         </div>
                         <div>
                             <label
                                 class="block text-sm font-medium text-gray-700 mb-1"
                                 >End Date</label
                             >
-                            <input
-                                v-model="form.campaign_end"
-                                type="date"
-                                class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
+                            <DateInput v-model="form.campaign_end" />
                         </div>
                     </div>
                 </div>
@@ -507,18 +508,8 @@ async function handleSubmit() {
                                     placeholder="Option (e.g. Small)"
                                     class="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
-                                <div class="relative">
-                                    <span
-                                        class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm"
-                                        >RM</span
-                                    >
-                                    <input
-                                        v-model="option.price"
-                                        type="number"
-                                        min="0"
-                                        placeholder="0.00"
-                                        class="w-28 border border-gray-200 rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    />
+                                <div class="w-32">
+                                    <CurrencyInput v-model="option.price" compact />
                                 </div>
                                 <button
                                     type="button"
