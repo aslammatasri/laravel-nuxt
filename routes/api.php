@@ -8,6 +8,7 @@ use App\Http\Controllers\Brand\ApplicationController as BrandApplicationControll
 use App\Http\Controllers\Brand\CreatorController as BrandCreatorController;
 use App\Http\Controllers\Brand\DashboardController as BrandDashboardController;
 use App\Http\Controllers\Creator\ApplicationController as CreatorApplicationController;
+use App\Http\Controllers\Creator\CollaborationController;
 use App\Http\Controllers\Creator\DashboardController as CreatorDashboardController;
 use App\Http\Controllers\Creator\SocialAccountController;
 use App\Http\Controllers\NotificationController;
@@ -70,6 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('marketplace/{id}',        [CreatorProductController::class, 'show']);
         Route::post('products/{id}/apply',    [CreatorApplicationController::class, 'store']);
         Route::get('applications',            [CreatorApplicationController::class, 'index']);
+        Route::get('collaborations',          [CollaborationController::class, 'index']);
         Route::get('social-accounts',            [SocialAccountController::class, 'index']);
         Route::post('social-accounts/youtube',   [SocialAccountController::class, 'store']);
         Route::post('social-accounts/{id}/sync', [SocialAccountController::class, 'sync']);
