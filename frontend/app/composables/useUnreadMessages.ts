@@ -3,7 +3,10 @@ export const useUnreadMessages = () => {
   const { $api } = useApi()
   const count = useState<number>('unread-messages', () => 0)
 
+  const token = useCookie('auth_token')
+
   async function refresh() {
+    if (!token.value) return
     try {
       const res = await $api<{ count: number }>('/conversations/unread-count')
       count.value = res.count
@@ -15,9 +18,10 @@ export const useUnreadMessages = () => {
   let timer: ReturnType<typeof setInterval> | null = null
 
   function startPolling() {
+    stopPolling()
     refresh()
     timer = setInterval(() => {
-      if (document.visibilityState === 'visible') refresh()
+      if (token.value && document.visibilityState === 'visible') refresh()
     }, 15000)
   }
 
