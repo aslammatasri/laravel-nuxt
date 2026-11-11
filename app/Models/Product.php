@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\ApplicationStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -47,6 +48,20 @@ class Product extends Model
     public function setImagesAttribute(array $value): void
     {
         $this->attributes['images'] = json_encode($value);
+    }
+
+    // Remaining affiliate slots (approved creators count); null = unlimited
+    public function getSpotsLeftAttribute(): ?int
+    {
+        if (! $this->max_affiliates) {
+            return null;
+        }
+
+        $approved = $this->applications()
+            ->where('status', ApplicationStatus::APPROVED->value)
+            ->count();
+
+        return max(0, $this->max_affiliates - $approved);
     }
 
     public function brand(): BelongsTo

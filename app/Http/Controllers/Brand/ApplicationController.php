@@ -18,7 +18,8 @@ class ApplicationController extends Controller
         $status       = $request->query('status'); // ?status=pending
         $applications = $this->applicationService->getBrandApplications(
             $request->user()->id,
-            $status
+            $status,
+            $request->integer('product_id') ?: null
         );
 
         return response()->json($applications);

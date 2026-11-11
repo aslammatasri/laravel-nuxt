@@ -15,6 +15,8 @@ interface Product {
     category: string;
     description: string;
     price: number;
+    campaign_end?: string | null;
+    pending_applications_count?: number;
 }
 interface Paginated<T> {
     data: T[];
@@ -28,6 +30,20 @@ const { $api } = useApi();
 const { data: products, refresh } = await useAsyncData("products", () =>
     $api<Paginated<Product>>("/brand/products").catch(() => null),
 );
+
+// Active but past its end date (before the daily job closes it)
+const hasEnded = (p: Product) =>
+    p.status === "active" &&
+    !!p.campaign_end &&
+    new Date(p.campaign_end).getTime() < Date.now();
+
+async function toggleStatus(product: Product) {
+    await $api(`/brand/products/${product.id}`, {
+        method: "PUT",
+        body: { status: product.status === "active" ? "paused" : "active" },
+    });
+    await refresh();
+}
 
 async function deleteProduct(id: number) {
     if (!confirm("Are you sure you want to delete this product?")) return;
@@ -104,20 +120,32 @@ async function deleteProduct(id: number) {
                         <h3
                             class="font-semibold text-gray-900 text-sm leading-tight"
                         >
-                            {{ product.name }}
+                            <NuxtLink :to="`/brand/products/${product.id}`" class="hover:underline">
+                                {{ product.name }}
+                            </NuxtLink>
                         </h3>
                         <span
                             class="text-xs px-2 py-0.5 rounded-full ml-2 shrink-0"
                             :class="{
                                 'bg-green-100 text-green-700':
-                                    product.status === 'active',
+                                    product.status === 'active' && !hasEnded(product),
+                                'bg-yellow-100 text-yellow-700':
+                                    product.status === 'paused',
                                 'bg-gray-100 text-gray-500':
-                                    product.status !== 'active',
+                                    product.status === 'closed' || hasEnded(product),
                             }"
                         >
-                            {{ product.status }}
+                            {{ hasEnded(product) ? "ended" : product.status }}
                         </span>
                     </div>
+
+                    <NuxtLink
+                        v-if="product.pending_applications_count"
+                        :to="`/brand/products/${product.id}`"
+                        class="inline-block text-xs px-2.5 py-1 rounded-full bg-yellow-100 text-yellow-700 font-medium mb-3 hover:bg-yellow-200 transition-colors"
+                    >
+                        {{ product.pending_applications_count }} pending
+                    </NuxtLink>
 
                     <p class="text-gray-400 text-xs mb-3 line-clamp-2">
                         {{ product.description }}
@@ -145,6 +173,13 @@ async function deleteProduct(id: number) {
                         >
                             Edit
                         </NuxtLink>
+                        <button
+                            v-if="product.status !== 'closed'"
+                            @click="toggleStatus(product)"
+                            class="flex-1 text-center border border-gray-200 text-gray-600 px-3 py-2 rounded-xl text-xs hover:bg-gray-50 transition-colors"
+                        >
+                            {{ product.status === "active" ? "Pause" : "Activate" }}
+                        </button>
                         <button
                             @click="deleteProduct(product.id)"
                             class="flex-1 text-center border border-red-100 text-red-500 px-3 py-2 rounded-xl text-xs hover:bg-red-50 transition-colors"

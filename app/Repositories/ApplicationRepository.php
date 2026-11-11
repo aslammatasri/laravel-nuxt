@@ -33,11 +33,12 @@ class ApplicationRepository extends BaseRepository implements ApplicationReposit
             ->paginate(15);
     }
 
-    public function getByBrand(int $brandId, ?string $status = null)
+    public function getByBrand(int $brandId, ?string $status = null, ?int $productId = null)
     {
         return $this->model
             ->with(['product', 'creator'])
             ->whereHas('product', fn($q) => $q->where('brand_id', $brandId))
+            ->when($productId, fn($q) => $q->where('product_id', $productId))
             ->when($status, fn($q) => $q->where('status', $status))
             ->latest()
             ->paginate(15);

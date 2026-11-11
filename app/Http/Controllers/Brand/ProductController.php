@@ -44,6 +44,19 @@ class ProductController extends Controller
             $request->user()->id
         );
 
+        $counts = $product->applications()
+            ->selectRaw('status, count(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+
+        $product->setAttribute('application_counts', [
+            'total'    => (int) $counts->sum(),
+            'pending'  => (int) ($counts['pending'] ?? 0),
+            'approved' => (int) ($counts['approved'] ?? 0),
+            'rejected' => (int) ($counts['rejected'] ?? 0),
+        ]);
+        $product->setAttribute('spots_left', $product->spots_left);
+
         return response()->json($product);
     }
 
