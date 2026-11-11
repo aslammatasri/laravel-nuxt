@@ -6,11 +6,6 @@ const navItems = [
     { label: "Dashboard", icon: "dashboard", to: "/creator/dashboard" },
     { label: "Marketplace", icon: "marketplace", to: "/creator/marketplace" },
     {
-        label: "Applications",
-        icon: "applications",
-        to: "/creator/applications",
-    },
-    {
         label: "Collaborations",
         icon: "collaborations",
         to: "/creator/collaborations",

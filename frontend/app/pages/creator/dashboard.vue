@@ -110,14 +110,14 @@ const compact = (n: number) =>
             <div class="bg-white rounded-2xl p-6 border border-gray-100">
                 <p class="text-sm text-gray-500 mb-1">Total Applications</p>
                 <p class="text-3xl font-bold text-gray-900">{{ appStats.total }}</p>
-                <NuxtLink to="/creator/applications" class="text-xs text-green-600 hover:underline mt-2 block">
+                <NuxtLink to="/creator/dashboard#applications" class="text-xs text-green-600 hover:underline mt-2 block">
                     View all →
                 </NuxtLink>
             </div>
             <div class="bg-yellow-50 rounded-2xl p-6 border border-yellow-100">
                 <p class="text-sm text-yellow-700 mb-1">Pending</p>
                 <p class="text-3xl font-bold text-yellow-800">{{ appStats.pending }}</p>
-                <NuxtLink to="/creator/applications?status=pending" class="text-xs text-yellow-700 hover:underline mt-2 block">
+                <NuxtLink to="/creator/dashboard?status=pending#applications" class="text-xs text-yellow-700 hover:underline mt-2 block">
                     Check status →
                 </NuxtLink>
             </div>
@@ -131,7 +131,7 @@ const compact = (n: number) =>
             <div class="bg-red-50 rounded-2xl p-6 border border-red-100">
                 <p class="text-sm text-red-700 mb-1">Rejected</p>
                 <p class="text-3xl font-bold text-red-800">{{ appStats.rejected }}</p>
-                <NuxtLink to="/creator/applications?status=rejected" class="text-xs text-red-700 hover:underline mt-2 block">
+                <NuxtLink to="/creator/dashboard?status=rejected#applications" class="text-xs text-red-700 hover:underline mt-2 block">
                     View rejected →
                 </NuxtLink>
             </div>
@@ -258,6 +258,11 @@ const compact = (n: number) =>
                     Connect a social account in your portfolio to show your reach to brands.
                 </p>
             </div>
+        </div>
+
+        <!-- Applications -->
+        <div class="mb-8">
+            <CreatorApplicationsPanel />
         </div>
 
         <!-- Latest Products in Marketplace -->

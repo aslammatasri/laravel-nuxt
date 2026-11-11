@@ -31,7 +31,7 @@ class ApplicationStatusUpdated extends Notification
             'message'        => "Your application for \"{$this->application->product->name}\" was {$status}.",
             'application_id' => $this->application->id,
             'status'         => $status,
-            'url'            => '/creator/applications',
+            'url'            => '/creator/dashboard#applications',
         ];
     }
 }
