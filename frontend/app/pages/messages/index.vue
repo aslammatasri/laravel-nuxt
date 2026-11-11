@@ -190,20 +190,33 @@ function showDay(i: number) {
 }
 
 // ── Polling: list 10s, open thread 5s, only while tab visible ──
+// Timers start synchronously and are guarded by `disposed`: setPageLayout can
+// remount this page, and a timer created after unmount would leak and keep
+// polling on every page (and 401 once the session ends).
+const token = useCookie("auth_token");
+let disposed = false;
 let listTimer: ReturnType<typeof setInterval> | null = null;
 let threadTimer: ReturnType<typeof setInterval> | null = null;
 
-onMounted(async () => {
-    await loadConversations();
-    await openFromQuery();
+const canPoll = () =>
+    !disposed && !!token.value && document.visibilityState === "visible";
+
+onMounted(() => {
     listTimer = setInterval(() => {
-        if (document.visibilityState === "visible") loadConversations();
+        if (canPoll()) loadConversations();
     }, 10000);
     threadTimer = setInterval(() => {
-        if (document.visibilityState === "visible") pollThread();
+        if (canPoll()) pollThread();
     }, 5000);
+
+    (async () => {
+        await loadConversations();
+        if (!disposed) await openFromQuery();
+    })();
 });
-onUnmounted(() => {
+
+onBeforeUnmount(() => {
+    disposed = true;
     if (listTimer) clearInterval(listTimer);
     if (threadTimer) clearInterval(threadTimer);
 });
