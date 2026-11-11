@@ -38,13 +38,54 @@ interface Stats {
     top_products: { id: number; name: string; applications: number }[];
 }
 
-const { data: stats } = await useAsyncData("brand-dashboard-stats", () =>
+const { data: stats, refresh: refreshStats } = await useAsyncData("brand-dashboard-stats", () =>
     $api<Stats>("/brand/dashboard/stats").catch(() => null),
 );
 
-const { data: applications } = await useAsyncData("brand-applications", () =>
+const { data: applications, refresh: refreshApplications } = await useAsyncData("brand-applications", () =>
     $api<Paginated<Application>>("/brand/applications").catch(() => null),
 );
+
+// ── Quick review actions ───────────────────────────────────────
+const actingId = ref<number | null>(null);
+const showRejectModal = ref(false);
+const rejectAppId = ref<number | null>(null);
+const rejectReason = ref("");
+
+async function refreshAll() {
+    await Promise.all([refreshApplications(), refreshStats()]);
+}
+
+async function approve(id: number) {
+    actingId.value = id;
+    try {
+        await $api(`/brand/applications/${id}/approve`, { method: "PATCH" });
+        await refreshAll();
+    } finally {
+        actingId.value = null;
+    }
+}
+
+function openReject(id: number) {
+    rejectAppId.value = id;
+    rejectReason.value = "";
+    showRejectModal.value = true;
+}
+
+async function confirmReject() {
+    if (!rejectReason.value.trim() || rejectAppId.value === null) return;
+    actingId.value = rejectAppId.value;
+    try {
+        await $api(`/brand/applications/${rejectAppId.value}/reject`, {
+            method: "PATCH",
+            body: { reason: rejectReason.value },
+        });
+        showRejectModal.value = false;
+        await refreshAll();
+    } finally {
+        actingId.value = null;
+    }
+}
 
 // ── Computed ───────────────────────────────────────────────────
 const appStats = computed(
@@ -60,6 +101,14 @@ const appStats = computed(
 const prod = computed(
     () => stats.value?.products ?? { total: 0, active: 0, inactive: 0 },
 );
+// Pending first so there is always something to act on
+const recentApplications = computed(() => {
+    const list = applications.value?.data ?? [];
+    return [
+        ...list.filter((a) => a.status === "pending"),
+        ...list.filter((a) => a.status !== "pending"),
+    ].slice(0, 5);
+});
 const topProducts = computed(() => stats.value?.top_products ?? []);
 const topMax = computed(() =>
     Math.max(1, ...topProducts.value.map((p) => p.applications)),
@@ -216,7 +265,7 @@ const activePct = computed(() =>
             <div
                 class="px-6 py-4 border-b border-gray-100 flex items-center justify-between"
             >
-                <h2 class="font-semibold text-gray-900">Recent Applications</h2>
+                <h2 class="font-semibold text-gray-900">Applications to Review</h2>
                 <NuxtLink
                     to="/brand/applications"
                     class="text-sm text-blue-600 hover:underline"
@@ -243,7 +292,7 @@ const activePct = computed(() =>
             <!-- Applications list -->
             <div v-else class="divide-y divide-gray-50">
                 <div
-                    v-for="app in applications?.data?.slice(0, 5)"
+                    v-for="app in recentApplications"
                     :key="app.id"
                     class="px-6 py-4 flex items-center justify-between"
                 >
@@ -262,15 +311,28 @@ const activePct = computed(() =>
                             </p>
                         </div>
                     </div>
+                    <div v-if="app.status === 'pending'" class="flex items-center gap-2">
+                        <button
+                            :disabled="actingId === app.id"
+                            @click="approve(app.id)"
+                            class="text-xs px-3 py-1.5 rounded-xl bg-green-50 text-green-700 hover:bg-green-100 disabled:opacity-50 font-medium transition-colors"
+                        >
+                            Approve
+                        </button>
+                        <button
+                            :disabled="actingId === app.id"
+                            @click="openReject(app.id)"
+                            class="text-xs px-3 py-1.5 rounded-xl bg-red-50 text-red-700 hover:bg-red-100 disabled:opacity-50 font-medium transition-colors"
+                        >
+                            Reject
+                        </button>
+                    </div>
                     <span
+                        v-else
                         class="text-xs px-3 py-1 rounded-full font-medium"
                         :class="{
-                            'bg-yellow-100 text-yellow-700':
-                                app.status === 'pending',
-                            'bg-green-100 text-green-700':
-                                app.status === 'approved',
-                            'bg-red-100 text-red-700':
-                                app.status === 'rejected',
+                            'bg-green-100 text-green-700': app.status === 'approved',
+                            'bg-red-100 text-red-700': app.status === 'rejected',
                         }"
                     >
                         {{ app.status }}
@@ -278,5 +340,41 @@ const activePct = computed(() =>
                 </div>
             </div>
         </div>
+
+        <!-- Reject modal -->
+        <Teleport to="body">
+            <div v-if="showRejectModal" class="fixed inset-0 z-50 flex items-center justify-center">
+                <div class="absolute inset-0 bg-black/30" @click="showRejectModal = false" />
+                <div class="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-md mx-4">
+                    <h3 class="text-lg font-bold text-gray-900 mb-1">Reject Application</h3>
+                    <p class="text-sm text-gray-400 mb-4">
+                        Let the creator know why their application was rejected.
+                    </p>
+                    <textarea
+                        v-model="rejectReason"
+                        rows="4"
+                        maxlength="500"
+                        placeholder="e.g. We are looking for creators with a different audience demographic..."
+                        class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
+                    />
+                    <p class="text-xs text-gray-400 mt-1 text-right">{{ rejectReason.length }}/500</p>
+                    <div class="flex gap-3 mt-4">
+                        <button
+                            @click="showRejectModal = false"
+                            class="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            @click="confirmReject"
+                            :disabled="!rejectReason.trim() || actingId !== null"
+                            class="flex-1 bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white py-2.5 rounded-xl text-sm font-medium transition-colors"
+                        >
+                            Reject
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
     </div>
 </template>

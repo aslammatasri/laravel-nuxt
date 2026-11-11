@@ -231,7 +231,7 @@ async function handleApply() {
                         <p class="pd-success__text">
                             The brand will review your application and get back to you soon.
                         </p>
-                        <NuxtLink to="/creator/applications" class="pd-btn">View my applications</NuxtLink>
+                        <NuxtLink to="/creator/dashboard#applications" class="pd-btn">View my applications</NuxtLink>
                         <NuxtLink to="/creator/marketplace" class="pd-btn pd-btn--ghost">Browse more</NuxtLink>
                     </div>
 
@@ -250,7 +250,7 @@ async function handleApply() {
                                     : "You already applied. The brand is reviewing your application."
                             }}
                         </p>
-                        <NuxtLink to="/creator/applications" class="pd-btn">View my applications</NuxtLink>
+                        <NuxtLink to="/creator/dashboard#applications" class="pd-btn">View my applications</NuxtLink>
                     </div>
 
                     <!-- Apply -->
