@@ -6,7 +6,7 @@ definePageMeta({
 const authStore = useAuth()
 const { $api }  = useApi()
 
-setPageLayout(authStore.isBrand ? 'brand' : 'creator')
+setPageLayout(authStore.isAdmin ? 'admin' : authStore.isBrand ? 'brand' : 'creator')
 
 const nameForm = reactive({
   name: authStore.user?.name || '',

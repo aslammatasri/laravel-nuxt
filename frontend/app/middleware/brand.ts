@@ -6,6 +6,6 @@ export default defineNuxtRouteMiddleware(() => {
   }
 
   if (auth.user && !auth.isBrand) {
-    return navigateTo('/creator/dashboard')
+    return navigateTo(roleHome(auth.user.role))
   }
 })
