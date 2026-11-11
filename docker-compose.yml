@@ -3,6 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: affiliatemy-backend
     env_file: .env
     environment:
       DB_HOST: db
@@ -11,6 +12,18 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    restart: unless-stopped
+
+  # Runs Laravel's scheduled tasks (routes/console.php), e.g. products:close-expired
+  scheduler:
+    image: affiliatemy-backend
+    command: php artisan schedule:work
+    env_file: .env
+    environment:
+      DB_HOST: db
+    depends_on:
+      backend:
+        condition: service_started
     restart: unless-stopped
 
   frontend:

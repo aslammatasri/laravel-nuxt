@@ -71,6 +71,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     {
         return $this->model
             ->where('brand_id', $brandId)
+            ->withCount(['applications as pending_applications_count' => fn ($q) => $q->where('status', 'pending')])
             ->latest()
             ->paginate(15);
     }

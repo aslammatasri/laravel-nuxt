@@ -22,9 +22,9 @@ class ApplicationService
         return $this->applicationRepository->getByCreator($creatorId, $status);
     }
 
-    public function getBrandApplications(int $brandId, ?string $status = null)
+    public function getBrandApplications(int $brandId, ?string $status = null, ?int $productId = null)
     {
-        return $this->applicationRepository->getByBrand($brandId, $status);
+        return $this->applicationRepository->getByBrand($brandId, $status, $productId);
     }
 
     public function applyToProduct(int $creatorId, int $productId, string $pitch)
