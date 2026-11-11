@@ -14,7 +14,7 @@ interface Product {
     category: string;
     commission_rate: string | number;
     commission_type: string;
-    brand: { name: string };
+    brand: { name: string; brand_profile?: { is_verified: boolean } | null };
     my_application_status: 'pending' | 'approved' | 'rejected' | null;
 }
 
@@ -328,7 +328,10 @@ const commissionTier = (rate: number | string) => {
                 <div class="mp-card__body">
                     <p class="mp-card__meta">
                         <span class="mp-card__cat">{{ product.category }}</span>
-                        <span class="mp-card__brand">by {{ product.brand?.name }}</span>
+                        <span class="mp-card__brand">
+                            by {{ product.brand?.name }}
+                            <span v-if="product.brand?.brand_profile?.is_verified" class="mp-verified" title="Verified brand">✓ Verified</span>
+                        </span>
                     </p>
                     <h3 class="mp-card__name">
                         <NuxtLink :to="`/creator/marketplace/${product.id}`" class="mp-card__link">
@@ -914,6 +917,16 @@ a:focus-visible {
     line-height: 1.5;
 }
 
+.mp-verified {
+    margin-left: 0.25rem;
+    padding: 0.05rem 0.4rem;
+    border-radius: 9999px;
+    background: #f0fdf4;
+    color: #15803d;
+    font-size: 0.65rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
 .mp-card__cta {
     display: inline-flex;
     align-items: center;

@@ -46,7 +46,7 @@ interface Product {
     campaign_end: string;
     max_affiliates: number;
     spots_left: number;
-    brand: { name: string };
+    brand: { name: string; brand_profile?: { is_verified: boolean } | null };
     variations: Variation[];
     my_application_status: 'pending' | 'approved' | 'rejected' | null;
 }
@@ -169,7 +169,10 @@ async function handleApply() {
                 <section class="pd-intro">
                     <p class="pd-meta">
                         <span class="pd-cat">{{ product.category }}</span>
-                        <span v-if="product.brand?.name" class="pd-brand">by {{ product.brand.name }}</span>
+                        <span v-if="product.brand?.name" class="pd-brand">
+                            by {{ product.brand.name }}
+                            <span v-if="product.brand.brand_profile?.is_verified" class="pd-verified" title="Verified brand">✓ Verified</span>
+                        </span>
                     </p>
                     <h1 class="pd-title">{{ product.name }}</h1>
                     <p class="pd-desc">{{ product.description }}</p>
@@ -299,6 +302,16 @@ async function handleApply() {
 </template>
 
 <style scoped>
+.pd-verified {
+    margin-left: 0.35rem;
+    padding: 0.05rem 0.45rem;
+    border-radius: 9999px;
+    background: #f0fdf4;
+    color: #15803d;
+    font-size: 0.7rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
 
 /* Hallmark · genre: modern-minimal (app page) · macrostructure: Split Studio (content left, sticky apply panel right) · theme: existing creator scheme (Tailwind green + gray, red errors) · enrichment: none

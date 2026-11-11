@@ -42,6 +42,11 @@ const { data: stats, refresh: refreshStats } = await useAsyncData("brand-dashboa
     $api<Stats>("/brand/dashboard/stats").catch(() => null),
 );
 
+const { data: verification } = await useAsyncData("brand-verification-status", () =>
+    $api<{ verification_status: string }>("/brand/verification").catch(() => null),
+);
+const verificationStatus = computed(() => verification.value?.verification_status ?? "unverified");
+
 const { data: applications, refresh: refreshApplications } = await useAsyncData("brand-applications", () =>
     $api<Paginated<Application>>("/brand/applications").catch(() => null),
 );
@@ -146,6 +151,42 @@ const activePct = computed(() =>
                 Here's what's happening with your campaigns
             </p>
         </div>
+
+        <!-- Verification prompt -->
+        <NuxtLink
+            v-if="verificationStatus !== 'verified'"
+            to="/brand/verification"
+            class="flex items-center justify-between gap-4 rounded-2xl border px-5 py-4 mb-6 transition-colors"
+            :class="
+                verificationStatus === 'rejected'
+                    ? 'bg-red-50 border-red-100 text-red-800 hover:bg-red-100'
+                    : verificationStatus === 'pending'
+                      ? 'bg-yellow-50 border-yellow-100 text-yellow-800 hover:bg-yellow-100'
+                      : 'bg-blue-50 border-blue-100 text-blue-800 hover:bg-blue-100'
+            "
+        >
+            <span>
+                <span class="font-semibold block">
+                    {{
+                        verificationStatus === "pending"
+                            ? "Verification under review"
+                            : verificationStatus === "rejected"
+                              ? "Verification rejected"
+                              : "Verify your brand"
+                    }}
+                </span>
+                <span class="text-sm">
+                    {{
+                        verificationStatus === "pending"
+                            ? "We are checking your SSM details."
+                            : verificationStatus === "rejected"
+                              ? "See the reason and resubmit."
+                              : "Add your SSM number so creators can trust you."
+                    }}
+                </span>
+            </span>
+            <span class="text-sm font-medium shrink-0">Open →</span>
+        </NuxtLink>
 
         <!-- Stats Grid -->
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">

@@ -43,7 +43,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value  = response.user
 
       // Redirect based on role
-      await navigateTo(response.user.role === 'brand' ? '/brand/dashboard' : '/creator/dashboard')
+      await navigateTo(roleHome(response.user.role))
     } catch (err: any) {
       error.value = err?.data?.message || 'Registration failed'
     } finally {
@@ -66,7 +66,7 @@ export const useAuthStore = defineStore('auth', () => {
       user.value  = response.user
 
       // Redirect based on role
-      await navigateTo(response.user.role === 'brand' ? '/brand/dashboard' : '/creator/dashboard')
+      await navigateTo(roleHome(response.user.role))
     } catch (err: any) {
       error.value = err?.data?.message || 'Invalid credentials'
     } finally {

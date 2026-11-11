@@ -13,12 +13,18 @@ class BrandProfile extends Model
         'industry',
         'ssm_no',
         'is_verified',
+        'verification_status',
+        'verification_note',
+        'submitted_at',
+        'verified_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'is_verified' => 'boolean',
+            'is_verified'  => 'boolean',
+            'submitted_at' => 'datetime',
+            'verified_at'  => 'datetime',
         ];
     }
 

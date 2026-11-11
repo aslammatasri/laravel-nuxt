@@ -1,7 +1,11 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\Admin\BrandController as AdminBrandController;
+use App\Http\Controllers\Admin\StatsController as AdminStatsController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Brand\ProductController as BrandProductController;
+use App\Http\Controllers\Brand\VerificationController as BrandVerificationController;
 use App\Http\Controllers\Brand\VariationController;
 use App\Http\Controllers\Creator\ProductController as CreatorProductController;
 use App\Http\Controllers\Brand\ApplicationController as BrandApplicationController;
@@ -64,6 +68,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Brand only routes
     Route::middleware('role:brand')->prefix('brand')->group(function () {
         Route::get('dashboard/stats', [BrandDashboardController::class, 'stats']);
+        Route::get('verification',    [BrandVerificationController::class, 'show']);
+        Route::put('verification',    [BrandVerificationController::class, 'update']);
         Route::apiResource('products', BrandProductController::class);
         Route::post('products/{product}/variations',               [VariationController::class, 'store']);
         Route::put('products/{product}/variations/{variation}',    [VariationController::class, 'update']);
@@ -72,6 +78,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('applications/{id}/approve', [BrandApplicationController::class, 'approve']);
         Route::patch('applications/{id}/reject',  [BrandApplicationController::class, 'reject']);
         Route::get('creators/{id}/portfolio',     [BrandCreatorController::class, 'portfolio']);
+    });
+
+    // Admin only routes
+    Route::middleware('role:admin')->prefix('admin')->group(function () {
+        Route::get('stats',                       [AdminStatsController::class, 'index']);
+        Route::get('users',                       [AdminUserController::class, 'index']);
+        Route::patch('users/{id}/suspend',        [AdminUserController::class, 'suspend']);
+        Route::patch('users/{id}/reactivate',     [AdminUserController::class, 'reactivate']);
+        Route::get('brands',                [AdminBrandController::class, 'index']);
+        Route::patch('brands/{id}/verify',  [AdminBrandController::class, 'verify']);
+        Route::patch('brands/{id}/reject',  [AdminBrandController::class, 'reject']);
     });
 
     // Creator only routes

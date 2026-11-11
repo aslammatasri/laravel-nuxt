@@ -26,7 +26,7 @@ const steps = [
 const creatorChecklist = ['Join as a creator for free', 'Showcase your real channel stats', 'Apply to commission products']
 const brandChecklist = ['List your products in minutes', 'Connect directly with creators', 'Only pay for real results']
 
-const dashboardTo = computed(() => (authStore.isBrand ? '/brand/dashboard' : '/creator/dashboard'))
+const dashboardTo = computed(() => roleHome(authStore.user?.role))
 
 /* ---- Command palette (⌘K) ---- */
 type Command = { label: string; hint: string; run: () => void }

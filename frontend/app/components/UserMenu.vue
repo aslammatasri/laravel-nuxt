@@ -1,8 +1,10 @@
 <script setup lang="ts">
-const props = defineProps<{ accent?: 'blue' | 'green' }>()
+const props = defineProps<{ accent?: 'blue' | 'green' | 'violet' }>()
 const accentClasses = props.accent === 'green'
   ? 'bg-green-100 text-green-700'
-  : 'bg-blue-100 text-blue-700'
+  : props.accent === 'violet'
+    ? 'bg-violet-100 text-violet-700'
+    : 'bg-blue-100 text-blue-700'
 
 const authStore = useAuthStore()
 const open = ref(false)
