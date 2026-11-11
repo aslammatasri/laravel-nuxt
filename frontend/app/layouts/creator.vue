@@ -16,6 +16,10 @@ const navItems = [
 ];
 
 const isActive = (path: string) => route.path.startsWith(path);
+
+const unread = useUnreadMessages()
+onMounted(() => unread.startPolling())
+onUnmounted(() => unread.stopPolling())
 </script>
 
 <template>
@@ -55,8 +59,20 @@ const isActive = (path: string) => route.path.startsWith(path);
                         collapsed ? 'justify-center px-0' : 'px-4',
                     ]"
                 >
-                    <AppIcon :name="item.icon" />
-                    <span v-if="!collapsed">{{ item.label }}</span>
+                    <span class="relative">
+            <AppIcon :name="item.icon" />
+            <span
+              v-if="item.to === '/messages' && unread.count.value > 0"
+              class="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-red-500 ring-2 ring-white"
+            />
+          </span>
+                    <span v-if="!collapsed" class="flex-1">{{ item.label }}</span>
+          <span
+            v-if="!collapsed && item.to === '/messages' && unread.count.value > 0"
+            class="min-w-[20px] h-5 px-1.5 flex items-center justify-center rounded-full bg-red-500 text-white text-[11px] font-bold"
+          >
+            {{ unread.count.value > 9 ? '9+' : unread.count.value }}
+          </span>
                 </NuxtLink>
             </nav>
 

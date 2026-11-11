@@ -276,17 +276,24 @@ async function confirmReject() {
                         <h2 class="font-semibold text-gray-900 mb-4">Approved Creators</h2>
                         <p v-if="!approvedApps.length" class="text-sm text-gray-400">No approved creators yet.</p>
                         <div v-else class="flex flex-wrap gap-2">
-                            <NuxtLink
+                            <div
                                 v-for="a in approvedApps"
                                 :key="a.id"
-                                :to="`/brand/creators/${a.creator.id}`"
-                                class="flex items-center gap-2 border border-gray-100 rounded-full pl-1 pr-3 py-1 hover:bg-gray-50 transition-colors"
+                                class="flex items-center gap-2 border border-gray-100 rounded-full pl-1 pr-1 py-1"
                             >
-                                <span class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center">
-                                    {{ a.creator?.name?.charAt(0).toUpperCase() }}
-                                </span>
-                                <span class="text-sm text-gray-700">{{ a.creator?.name }}</span>
-                            </NuxtLink>
+                                <NuxtLink :to="`/brand/creators/${a.creator.id}`" class="flex items-center gap-2 hover:underline">
+                                    <span class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center">
+                                        {{ a.creator?.name?.charAt(0).toUpperCase() }}
+                                    </span>
+                                    <span class="text-sm text-gray-700">{{ a.creator?.name }}</span>
+                                </NuxtLink>
+                                <NuxtLink
+                                    :to="`/messages?application=${a.id}`"
+                                    class="text-xs px-2.5 py-1 rounded-full bg-blue-50 text-blue-700 hover:bg-blue-100 font-medium transition-colors"
+                                >
+                                    Message
+                                </NuxtLink>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\ApplicationStatus;
+use App\Models\Conversation;
 use App\Models\Product;
 use App\Notifications\ApplicationStatusUpdated;
 use App\Notifications\NewApplicationReceived;
@@ -76,6 +77,16 @@ class ApplicationService
         }
 
         $application = $this->applicationRepository->approve($applicationId);
+
+        // Open the brand <-> creator chat for this collaboration
+        Conversation::firstOrCreate(
+            ['application_id' => $application->id],
+            [
+                'product_id' => $application->product_id,
+                'brand_id'   => $application->product->brand_id,
+                'creator_id' => $application->creator_id,
+            ],
+        );
         $application->creator->notify(new ApplicationStatusUpdated($application));
 
         return $application;

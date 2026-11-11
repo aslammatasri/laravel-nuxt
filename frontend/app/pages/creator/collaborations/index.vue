@@ -184,6 +184,12 @@ function commission(c: Collab) {
                         {{ expandedId === c.id ? "Hide brief" : "View brief" }}
                     </button>
                     <NuxtLink
+                        :to="`/messages?application=${c.id}`"
+                        class="text-xs px-3 py-1.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-medium transition-colors"
+                    >
+                        Message brand
+                    </NuxtLink>
+                    <NuxtLink
                         :to="`/creator/marketplace/${c.product.id}`"
                         class="text-xs px-3 py-1.5 rounded-xl bg-green-50 text-green-700 hover:bg-green-100 font-medium transition-colors"
                     >
