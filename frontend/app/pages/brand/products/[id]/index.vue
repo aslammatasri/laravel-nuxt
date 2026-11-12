@@ -36,7 +36,7 @@ interface Application {
     status: string;
     pitch_message: string;
     created_at: string;
-    creator: { id: number; name: string };
+    creator: { id: number; name: string; avatar?: string | null };
 }
 
 const route = useRoute();
@@ -239,9 +239,7 @@ async function confirmReject() {
                             <li v-for="a in [...pendingApps, ...decidedApps]" :key="a.id" class="px-6 py-4">
                                 <div class="flex items-center justify-between gap-3">
                                     <div class="flex items-center gap-3 min-w-0">
-                                        <div class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 text-sm font-bold shrink-0">
-                                            {{ a.creator?.name?.charAt(0).toUpperCase() }}
-                                        </div>
+                                        <Avatar :src="a.creator?.avatar" :name="a.creator?.name" size="sm" />
                                         <div class="min-w-0">
                                             <NuxtLink :to="`/brand/creators/${a.creator.id}`" class="text-sm font-medium text-gray-900 hover:underline">
                                                 {{ a.creator?.name }}
@@ -282,9 +280,7 @@ async function confirmReject() {
                                 class="flex items-center gap-2 border border-gray-100 rounded-full pl-1 pr-1 py-1"
                             >
                                 <NuxtLink :to="`/brand/creators/${a.creator.id}`" class="flex items-center gap-2 hover:underline">
-                                    <span class="w-7 h-7 rounded-full bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center">
-                                        {{ a.creator?.name?.charAt(0).toUpperCase() }}
-                                    </span>
+                                    <Avatar :src="a.creator?.avatar" :name="a.creator?.name" size="xs" />
                                     <span class="text-sm text-gray-700">{{ a.creator?.name }}</span>
                                 </NuxtLink>
                                 <NuxtLink

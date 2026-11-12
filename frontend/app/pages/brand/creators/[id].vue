@@ -24,6 +24,7 @@ interface CreatorPortfolio {
   id: number
   name: string
   email: string
+  avatar?: string | null
   social_accounts: SocialAccount[]
 }
 
@@ -37,15 +38,6 @@ const { data: creator } = await useAsyncData(
 
 const youtube = computed(() => creator.value?.social_accounts?.find(a => a.platform === 'youtube') || null)
 
-function avatarColor(name: string): string {
-  const colors = [
-    'bg-red-400', 'bg-blue-400', 'bg-green-400', 'bg-yellow-400',
-    'bg-purple-400', 'bg-pink-400', 'bg-indigo-400', 'bg-teal-400',
-  ]
-  let hash = 0
-  for (let i = 0; i < (name || '').length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash)
-  return colors[Math.abs(hash) % colors.length]
-}
 
 function formatNumber(n: number | null): string {
   if (n === null || n === undefined) return '—'
@@ -69,12 +61,7 @@ function formatNumber(n: number | null): string {
     <template v-else>
       <!-- Header -->
       <div class="flex items-center gap-4 mb-8">
-        <div
-          class="w-14 h-14 rounded-full flex items-center justify-center text-white text-xl font-bold shrink-0"
-          :class="avatarColor(creator.name)"
-        >
-          {{ creator.name.charAt(0).toUpperCase() }}
-        </div>
+        <Avatar :src="creator.avatar" :name="creator.name" size="lg" />
         <div>
           <h1 class="text-2xl font-bold text-gray-900">{{ creator.name }}</h1>
           <p class="text-gray-500">{{ creator.email }}</p>

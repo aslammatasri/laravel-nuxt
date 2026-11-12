@@ -6,6 +6,7 @@ interface UserRow {
     name: string;
     email: string;
     role: "creator" | "brand";
+    avatar?: string | null;
     created_at: string;
     suspended_at: string | null;
     suspended_reason: string | null;
@@ -148,12 +149,7 @@ async function reactivate(u: UserRow) {
             <ul class="divide-y divide-gray-50">
                 <li v-for="u in rows" :key="u.id" class="px-6 py-4 flex flex-wrap items-center justify-between gap-4">
                     <div class="flex items-center gap-3 min-w-0">
-                        <div
-                            class="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold shrink-0"
-                            :class="u.role === 'brand' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'"
-                        >
-                            {{ u.name.charAt(0).toUpperCase() }}
-                        </div>
+                        <Avatar :src="u.avatar" :name="u.name" size="md" :tone="u.role === 'brand' ? 'blue' : 'green'" />
                         <div class="min-w-0">
                             <div class="flex items-center gap-2">
                                 <p class="font-medium text-gray-900 truncate">{{ u.name }}</p>

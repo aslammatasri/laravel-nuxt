@@ -4,7 +4,7 @@ definePageMeta({ middleware: "auth" });
 interface Conversation {
     id: number;
     product: { id: number; name: string; image: string | null };
-    other: { id: number; name: string };
+    other: { id: number; name: string; avatar?: string | null };
     unread_count: number;
     last_message: { body: string; mine: boolean; created_at: string } | null;
     last_message_at: string | null;
@@ -256,17 +256,7 @@ onBeforeUnmount(() => {
                             class="w-full text-left px-4 py-3 flex gap-3 hover:bg-gray-50 transition-colors"
                             :class="c.id === selectedId ? accent.active : ''"
                         >
-                            <div class="w-11 h-11 rounded-xl bg-gray-100 overflow-hidden shrink-0 flex items-center justify-center">
-                                <img
-                                    v-if="c.product.image"
-                                    :src="`${config.public.storageBase}/${c.product.image}`"
-                                    :alt="c.product.name"
-                                    class="w-full h-full object-cover"
-                                />
-                                <span v-else class="text-sm font-bold text-gray-500">
-                                    {{ c.other.name.charAt(0).toUpperCase() }}
-                                </span>
-                            </div>
+                            <Avatar :src="c.other.avatar" :name="c.other.name" size="md" />
                             <div class="min-w-0 flex-1">
                                 <div class="flex items-baseline justify-between gap-2">
                                     <p class="text-sm truncate" :class="c.unread_count ? 'font-semibold text-gray-900' : 'font-medium text-gray-800'">
@@ -328,7 +318,16 @@ onBeforeUnmount(() => {
                             <p v-if="showDay(i)" class="text-[11px] text-gray-400 text-center py-2">
                                 {{ dayLabel(m.created_at) }}
                             </p>
-                            <div class="flex" :class="m.sender_id === myId ? 'justify-end' : 'justify-start'">
+                            <div class="flex items-end gap-2" :class="m.sender_id === myId ? 'justify-end' : 'justify-start'">
+                                <template v-if="m.sender_id !== myId">
+                                    <Avatar
+                                        v-if="i === messages.length - 1 || messages[i + 1]?.sender_id === myId"
+                                        :src="selected.other.avatar"
+                                        :name="selected.other.name"
+                                        size="xs"
+                                    />
+                                    <span v-else class="w-7 shrink-0" aria-hidden="true" />
+                                </template>
                                 <div
                                     class="max-w-[80%] md:max-w-[65%] px-3.5 py-2 rounded-2xl text-sm whitespace-pre-wrap break-words"
                                     :class="

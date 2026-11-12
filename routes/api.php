@@ -44,6 +44,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Profile (shared by both roles)
     Route::prefix('profile')->group(function () {
         Route::put('name',     [ProfileController::class, 'updateName']);
+        Route::post('avatar',   [ProfileController::class, 'updateAvatar']);
+        Route::delete('avatar', [ProfileController::class, 'deleteAvatar']);
         Route::put('password', [ProfileController::class, 'updatePassword']);
     });
 

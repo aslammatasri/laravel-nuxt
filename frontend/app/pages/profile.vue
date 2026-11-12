@@ -28,6 +28,49 @@ const showCurrent   = ref(false)
 const showNew       = ref(false)
 const showConfirm   = ref(false)
 
+const avatarLoading = ref(false)
+const avatarError   = ref('')
+
+async function handleAvatarChange(e: Event) {
+  const input = e.target as HTMLInputElement
+  const file  = input.files?.[0]
+  input.value = ''
+  if (!file) return
+
+  avatarError.value = ''
+  const { accepted, problems } = checkImageFiles([file])
+  if (!accepted.length) {
+    avatarError.value = problems[0] || 'That file cannot be used.'
+    return
+  }
+
+  avatarLoading.value = true
+  try {
+    const body = new FormData()
+    body.append('avatar', file)
+    const res = await $api<{ user: { avatar: string | null } }>('/profile/avatar', { method: 'POST', body })
+    authStore.user!.avatar = res.user.avatar
+  } catch (err: any) {
+    const parsed = parseApiError(err, 'Could not upload your photo.')
+    avatarError.value = parsed.fields.avatar || parsed.message
+  } finally {
+    avatarLoading.value = false
+  }
+}
+
+async function handleRemoveAvatar() {
+  avatarLoading.value = true
+  avatarError.value   = ''
+  try {
+    await $api('/profile/avatar', { method: 'DELETE' })
+    authStore.user!.avatar = null
+  } catch (err: any) {
+    avatarError.value = parseApiError(err, 'Could not remove your photo.').message
+  } finally {
+    avatarLoading.value = false
+  }
+}
+
 const nameUnchanged = computed(() => nameForm.name.trim() === (authStore.user?.name || ''))
 
 const passwordStrength = computed(() => {
@@ -125,9 +168,37 @@ async function handleUpdatePassword() {
       <!-- Identity -->
       <aside class="st-side">
         <div class="st-id">
-          <div class="st-avatar" aria-hidden="true">
-            {{ authStore.user?.name?.charAt(0).toUpperCase() || '?' }}
+          <div class="st-avatar-wrap">
+            <Avatar
+              :src="authStore.user?.avatar"
+              :name="authStore.user?.name"
+              size="xl"
+              :tone="authStore.isAdmin ? 'violet' : authStore.isBrand ? 'blue' : 'green'"
+            />
           </div>
+          <div class="st-avatar-actions">
+            <label class="st-avatar-btn" :class="{ 'is-busy': avatarLoading }">
+              {{ avatarLoading ? 'Uploading…' : authStore.user?.avatar ? 'Change photo' : 'Upload photo' }}
+              <input
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                class="st-avatar-input"
+                :disabled="avatarLoading"
+                @change="handleAvatarChange"
+              />
+            </label>
+            <button
+              v-if="authStore.user?.avatar"
+              type="button"
+              class="st-avatar-remove"
+              :disabled="avatarLoading"
+              @click="handleRemoveAvatar"
+            >
+              Remove
+            </button>
+          </div>
+          <p v-if="avatarError" class="st-avatar-error" role="alert">{{ avatarError }}</p>
+          <p v-else class="st-avatar-hint">JPG, PNG or WEBP, up to 2 MB</p>
           <p class="st-id__name">{{ authStore.user?.name }}</p>
           <p class="st-id__email">{{ authStore.user?.email }}</p>
           <span class="st-chip">{{ authStore.isBrand ? 'Brand account' : 'Creator account' }}</span>
@@ -415,17 +486,67 @@ async function handleUpdatePassword() {
   border: 1px solid var(--st-rule);
   border-radius: var(--st-radius);
 }
-.st-avatar {
-  display: grid;
-  place-items: center;
-  width: 5rem;
-  height: 5rem;
+.st-avatar-wrap {
   margin-bottom: 0.6rem;
+}
+.st-avatar-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.35rem;
+}
+.st-avatar-btn {
+  position: relative;
+  display: inline-block;
+  padding: 0.35rem 0.8rem;
+  border: 1px solid var(--st-rule, #e5e7eb);
   border-radius: 999px;
-  background: var(--st-accent-tint);
+  background: #fff;
+  font-size: 0.78rem;
+  font-weight: 600;
   color: var(--st-accent-ink);
-  font-size: 1.9rem;
-  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.st-avatar-btn:hover {
+  background: var(--st-accent-tint);
+}
+.st-avatar-btn:focus-within {
+  outline: 2px solid var(--st-accent-ink);
+  outline-offset: 2px;
+}
+.st-avatar-btn.is-busy {
+  opacity: 0.6;
+  cursor: progress;
+}
+.st-avatar-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+.st-avatar-remove {
+  border: 0;
+  background: none;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #dc2626;
+  cursor: pointer;
+}
+.st-avatar-remove:disabled {
+  opacity: 0.5;
+}
+.st-avatar-hint,
+.st-avatar-error {
+  margin: 0 0 0.6rem;
+  font-size: 0.72rem;
+}
+.st-avatar-hint {
+  color: #9ca3af;
+}
+.st-avatar-error {
+  color: #dc2626;
 }
 .st-id__name {
   margin: 0;

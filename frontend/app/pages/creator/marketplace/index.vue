@@ -14,7 +14,7 @@ interface Product {
     category: string;
     commission_rate: string | number;
     commission_type: string;
-    brand: { name: string; brand_profile?: { is_verified: boolean } | null };
+    brand: { name: string; avatar?: string | null; brand_profile?: { is_verified: boolean } | null };
     my_application_status: 'pending' | 'approved' | 'rejected' | null;
 }
 
@@ -328,7 +328,8 @@ const commissionTier = (rate: number | string) => {
                 <div class="mp-card__body">
                     <p class="mp-card__meta">
                         <span class="mp-card__cat">{{ product.category }}</span>
-                        <span class="mp-card__brand">
+                        <span class="mp-card__brand mp-card__brand--row">
+                            <Avatar :src="product.brand?.avatar" :name="product.brand?.name" size="xxs" />
                             by {{ product.brand?.name }}
                             <span v-if="product.brand?.brand_profile?.is_verified" class="mp-verified" title="Verified brand">✓ Verified</span>
                         </span>
@@ -828,6 +829,11 @@ a:focus-visible {
     flex: 1;
     flex-direction: column;
     padding: 1rem 1.1rem 1.1rem;
+}
+.mp-card__brand--row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
 }
 .mp-card__meta {
     display: flex;

@@ -16,6 +16,7 @@ class CreatorController extends Controller
             'id'              => $creator->id,
             'name'            => $creator->name,
             'email'           => $creator->email,
+            'avatar'          => $creator->avatar,
             'social_accounts' => $creator->creatorProfile?->socialAccounts ?? [],
         ]);
     }

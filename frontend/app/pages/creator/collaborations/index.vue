@@ -18,7 +18,7 @@ interface Collab {
         commission_type: string | null;
         campaign_start: string | null;
         campaign_end: string | null;
-        brand: { name: string | null };
+        brand: { name: string | null; avatar?: string | null };
         variations: { id: number; name: string; options: { value: string; price: number | string }[] }[];
     };
 }
@@ -156,7 +156,10 @@ function commission(c: Collab) {
                                 {{ stateLabel(c) }}
                             </span>
                         </div>
-                        <p class="text-sm text-gray-500 mt-0.5">by {{ c.product.brand?.name }}</p>
+                        <p class="text-sm text-gray-500 mt-0.5 flex items-center gap-1.5">
+                            <Avatar :src="c.product.brand?.avatar" :name="c.product.brand?.name" size="xxs" />
+                            by {{ c.product.brand?.name }}
+                        </p>
 
                         <dl class="grid grid-cols-3 gap-3 mt-3 text-xs">
                             <div>

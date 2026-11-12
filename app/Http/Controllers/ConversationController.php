@@ -17,8 +17,8 @@ class ConversationController extends Controller
 
         $conversations = Conversation::with([
                 'product:id,name,images,image',
-                'brand:id,name',
-                'creator:id,name',
+                'brand:id,name,avatar',
+                'creator:id,name,avatar',
             ])
             ->where(fn ($q) => $q->where('brand_id', $userId)->orWhere('creator_id', $userId))
             ->withCount(['messages as unread_count' => fn ($q) => $q
@@ -35,7 +35,7 @@ class ConversationController extends Controller
                 return [
                     'id'           => $c->id,
                     'product'      => ['id' => $c->product->id, 'name' => $c->product->name, 'image' => $c->product->images[0] ?? null],
-                    'other'        => ['id' => $other->id, 'name' => $other->name],
+                    'other'        => ['id' => $other->id, 'name' => $other->name, 'avatar' => $other->avatar],
                     'unread_count' => $c->unread_count,
                     'last_message' => $last ? [
                         'body'       => $last->body,
