@@ -6,6 +6,7 @@ interface User {
   name: string
   email: string
   role: 'creator' | 'brand' | 'admin'
+  avatar?: string | null
 }
 
 export const useAuthStore = defineStore('auth', () => {

@@ -28,10 +28,10 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
   <div ref="root" class="relative">
     <button
       @click="toggle"
-      class="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-opacity hover:opacity-80"
-      :class="accentClasses"
+      class="rounded-full transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
+      :aria-label="'Account menu for ' + authStore.user?.name"
     >
-      {{ authStore.user?.name?.charAt(0).toUpperCase() }}
+      <Avatar :src="authStore.user?.avatar" :name="authStore.user?.name" size="sm" :tone="props.accent ?? 'blue'" />
     </button>
 
     <div

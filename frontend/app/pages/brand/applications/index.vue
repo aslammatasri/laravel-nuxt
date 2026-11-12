@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { h } from "vue";
-import { NuxtLink } from "#components";
+import { NuxtLink, Avatar } from "#components";
 import { createColumnHelper, type ColumnDef } from "@tanstack/vue-table";
 
 definePageMeta({
@@ -19,6 +19,7 @@ interface Creator {
     id: number;
     name: string;
     email: string;
+    avatar?: string | null;
 }
 interface Application {
     id: number;
@@ -64,22 +65,6 @@ const filters = [
     { key: "rejected", label: "Rejected" },
 ];
 
-function avatarColor(name: string): string {
-    const colors = [
-        "bg-red-400",
-        "bg-blue-400",
-        "bg-green-400",
-        "bg-yellow-400",
-        "bg-purple-400",
-        "bg-pink-400",
-        "bg-indigo-400",
-        "bg-teal-400",
-    ];
-    let hash = 0;
-    for (let i = 0; i < (name || "").length; i++)
-        hash = name.charCodeAt(i) + ((hash << 5) - hash);
-    return colors[Math.abs(hash) % colors.length]!;
-}
 
 async function approve(id: number) {
     await $api(`/brand/applications/${id}/approve`, { method: "PATCH" });
@@ -140,13 +125,11 @@ const columns: ColumnDef<Application, any>[] = [
         cell: (info) => {
             const app = info.row.original;
             return h("div", { class: "flex items-center gap-3" }, [
-                h(
-                    "div",
-                    {
-                        class: `w-9 h-9 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0 ${avatarColor(app.creator?.name || "")}`,
-                    },
-                    (app.creator?.name || "?").charAt(0).toUpperCase(),
-                ),
+                h(Avatar, {
+                    src: app.creator?.avatar,
+                    name: app.creator?.name,
+                    size: "sm",
+                }),
                 h("div", { class: "min-w-0" }, [
                     h(
                         NuxtLink,

@@ -46,7 +46,7 @@ interface Product {
     campaign_end: string;
     max_affiliates: number;
     spots_left: number;
-    brand: { name: string; brand_profile?: { is_verified: boolean } | null };
+    brand: { name: string; avatar?: string | null; brand_profile?: { is_verified: boolean } | null };
     variations: Variation[];
     my_application_status: 'pending' | 'approved' | 'rejected' | null;
 }
@@ -169,7 +169,8 @@ async function handleApply() {
                 <section class="pd-intro">
                     <p class="pd-meta">
                         <span class="pd-cat">{{ product.category }}</span>
-                        <span v-if="product.brand?.name" class="pd-brand">
+                        <span v-if="product.brand?.name" class="pd-brand pd-brand--row">
+                            <Avatar :src="product.brand.avatar" :name="product.brand.name" size="xs" />
                             by {{ product.brand.name }}
                             <span v-if="product.brand.brand_profile?.is_verified" class="pd-verified" title="Verified brand">✓ Verified</span>
                         </span>
@@ -302,6 +303,11 @@ async function handleApply() {
 </template>
 
 <style scoped>
+.pd-brand--row {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+}
 .pd-verified {
     margin-left: 0.35rem;
     padding: 0.05rem 0.45rem;

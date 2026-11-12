@@ -13,7 +13,7 @@ interface Product {
 interface Application {
     id: number;
     status: string;
-    creator: { name: string };
+    creator: { name: string; avatar?: string | null };
     product: Product;
 }
 interface Paginated<T> {
@@ -338,11 +338,7 @@ const activePct = computed(() =>
                     class="px-6 py-4 flex items-center justify-between"
                 >
                     <div class="flex items-center gap-3">
-                        <div
-                            class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 text-sm font-bold"
-                        >
-                            {{ app.creator?.name?.charAt(0).toUpperCase() }}
-                        </div>
+                        <Avatar :src="app.creator?.avatar" :name="app.creator?.name" size="sm" />
                         <div>
                             <p class="text-sm font-medium text-gray-900">
                                 {{ app.creator?.name }}

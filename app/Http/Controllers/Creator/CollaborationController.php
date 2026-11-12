@@ -12,7 +12,7 @@ class CollaborationController extends Controller
     // GET /api/creator/collaborations
     public function index(Request $request)
     {
-        $collabs = ProductApplication::with(['product.brand:id,name', 'product.variations'])
+        $collabs = ProductApplication::with(['product.brand:id,name,avatar', 'product.variations'])
             ->where('creator_id', $request->user()->id)
             ->where('status', ApplicationStatus::APPROVED->value)
             ->latest('updated_at')
@@ -46,7 +46,7 @@ class CollaborationController extends Controller
                         'campaign_start'  => $p->campaign_start,
                         'campaign_end'    => $p->campaign_end,
                         'status'          => $p->status,
-                        'brand'           => ['name' => $p->brand?->name],
+                        'brand'           => ['name' => $p->brand?->name, 'avatar' => $p->brand?->avatar],
                         'variations'      => $p->variations->map(fn ($v) => [
                             'id'      => $v->id,
                             'name'    => $v->name,
