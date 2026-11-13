@@ -79,6 +79,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('applications',                [BrandApplicationController::class, 'index']);
         Route::patch('applications/{id}/approve', [BrandApplicationController::class, 'approve']);
         Route::patch('applications/{id}/reject',  [BrandApplicationController::class, 'reject']);
+        Route::get('creators',                    [BrandCreatorController::class, 'index']);
         Route::get('creators/{id}/portfolio',     [BrandCreatorController::class, 'portfolio']);
     });
 
