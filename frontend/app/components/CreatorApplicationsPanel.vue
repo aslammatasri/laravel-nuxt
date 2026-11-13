@@ -53,7 +53,7 @@ const columnHelper = createColumnHelper<Application>();
 const columns: ColumnDef<Application, any>[] = [
     columnHelper.accessor((row) => row.product?.name, {
         id: "product",
-        header: "Product",
+        header: "Campaign",
         cell: (info) =>
             h("div", [
                 h(
@@ -133,7 +133,7 @@ const columns: ColumnDef<Application, any>[] = [
         <div class="mb-4">
             <h2 class="font-semibold text-gray-900">My Applications</h2>
             <p class="text-sm text-gray-500 mt-0.5">
-                Track the status of your product applications
+                Track the status of your campaign applications
             </p>
         </div>
 
@@ -164,7 +164,7 @@ const columns: ColumnDef<Application, any>[] = [
             </div>
             <p class="font-medium text-gray-600">No applications yet</p>
             <p class="text-sm mt-1">
-                Browse the marketplace and apply to products you want to promote
+                Browse the marketplace and apply to campaigns you want to join
             </p>
             <NuxtLink
                 to="/creator/marketplace"

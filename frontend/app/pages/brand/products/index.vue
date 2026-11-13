@@ -46,7 +46,7 @@ async function toggleStatus(product: Product) {
 }
 
 async function deleteProduct(id: number) {
-    if (!confirm("Are you sure you want to delete this product?")) return;
+    if (!confirm("Are you sure you want to delete this campaign?")) return;
 
     await $api(`/brand/products/${id}`, { method: "DELETE" });
     await refresh();
@@ -58,14 +58,14 @@ async function deleteProduct(id: number) {
         <!-- Header -->
         <div class="flex items-center justify-between mb-8">
             <div>
-                <h1 class="text-2xl font-bold text-gray-900">Products</h1>
-                <p class="text-gray-500 mt-1">Manage your affiliate products</p>
+                <h1 class="text-2xl font-bold text-gray-900">Campaigns</h1>
+                <p class="text-gray-500 mt-1">Manage your creator campaigns</p>
             </div>
             <NuxtLink
                 to="/brand/products/create"
                 class="bg-blue-600 text-white px-5 py-2.5 rounded-xl text-sm font-medium hover:bg-blue-700 transition-colors"
             >
-                + Add Product
+                + Create campaign
             </NuxtLink>
         </div>
 
@@ -77,15 +77,15 @@ async function deleteProduct(id: number) {
             <div class="w-14 h-14 rounded-full bg-blue-50 flex items-center justify-center mx-auto mb-4">
                 <AppIcon name="products" class="text-blue-500" />
             </div>
-            <p class="font-medium text-gray-600">No products yet</p>
+            <p class="font-medium text-gray-600">No campaigns yet</p>
             <p class="text-sm mt-1">
-                Add your first product to start finding creators
+                Create your first campaign to start finding creators
             </p>
             <NuxtLink
                 to="/brand/products/create"
                 class="inline-block mt-4 bg-blue-600 text-white px-5 py-2 rounded-xl text-sm font-medium hover:bg-blue-700"
             >
-                Add Product
+                Create campaign
             </NuxtLink>
         </div>
 

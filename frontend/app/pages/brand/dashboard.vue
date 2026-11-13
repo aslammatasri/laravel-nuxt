@@ -259,11 +259,11 @@ const activePct = computed(() =>
             <!-- Products active vs inactive -->
             <div class="bg-white rounded-2xl border border-gray-100 p-6">
                 <div class="flex items-center justify-between mb-4">
-                    <h2 class="font-semibold text-gray-900">Products</h2>
+                    <h2 class="font-semibold text-gray-900">Campaigns</h2>
                     <NuxtLink to="/brand/products" class="text-sm text-blue-600 hover:underline">Manage</NuxtLink>
                 </div>
                 <p class="text-3xl font-bold text-gray-900">{{ prod.total }}</p>
-                <p class="text-sm text-gray-500 mb-4">total products</p>
+                <p class="text-sm text-gray-500 mb-4">total campaigns</p>
                 <div class="h-3 w-full rounded-full bg-gray-100 overflow-hidden flex">
                     <div class="h-full bg-blue-500 transition-all" :style="{ width: activePct + '%' }" />
                 </div>
@@ -281,7 +281,7 @@ const activePct = computed(() =>
 
             <!-- Top products -->
             <div class="bg-white rounded-2xl border border-gray-100 p-6">
-                <h2 class="font-semibold text-gray-900 mb-4">Most Applied Products</h2>
+                <h2 class="font-semibold text-gray-900 mb-4">Most Applied Campaigns</h2>
                 <p v-if="!topProducts.length" class="text-sm text-gray-400 py-6 text-center">
                     No applications yet
                 </p>

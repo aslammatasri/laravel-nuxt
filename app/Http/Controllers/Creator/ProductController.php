@@ -52,6 +52,10 @@ class ProductController extends Controller
             ->latest('id')
             ->value('status');
         $product->setAttribute('my_application_status', $latest?->value);
+        $product->setAttribute(
+            'my_subscribers',
+            (int) ($request->user()->creatorProfile?->socialAccounts()->sum('subscriber_count') ?? 0)
+        );
 
         return response()->json($product);
     }

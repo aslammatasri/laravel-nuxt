@@ -24,6 +24,16 @@ class Product extends Model
         'campaign_end',
         'max_affiliates',
         'target_niches',
+        'platforms',
+        'content_types',
+        'posts_required',
+        'brief',
+        'hashtags',
+        'product_url',
+        'min_subscribers',
+        'free_sample',
+        'flat_fee',
+        'application_deadline',
     ];
 
     protected function casts(): array
@@ -33,6 +43,12 @@ class Product extends Model
             'commission_rate' => 'decimal:2',
             'campaign_start' => 'date',
             'campaign_end' => 'date',
+            'application_deadline' => 'date',
+            'platforms' => 'array',
+            'content_types' => 'array',
+            'target_niches' => 'array',
+            'free_sample' => 'boolean',
+            'flat_fee' => 'decimal:2',
         ];
     }
 

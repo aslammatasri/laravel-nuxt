@@ -23,6 +23,17 @@ interface Product {
     campaign_end: string | null;
     max_affiliates: number | null;
     spots_left: number | null;
+    platforms?: string[] | null;
+    content_types?: string[] | null;
+    posts_required?: number | null;
+    brief?: string | null;
+    hashtags?: string | null;
+    product_url?: string | null;
+    min_subscribers?: number | null;
+    target_niches?: string[] | null;
+    free_sample?: boolean;
+    flat_fee?: string | number | null;
+    application_deadline?: string | null;
     variations: Variation[];
     application_counts: {
         total: number;
@@ -167,7 +178,7 @@ async function confirmReject() {
 <template>
     <div>
         <NuxtLink to="/brand/products" class="text-sm text-gray-500 hover:text-gray-900">
-            ← Back to products
+            ← Back to campaigns
         </NuxtLink>
 
         <div v-if="!product" class="mt-6 bg-white rounded-2xl border border-gray-100 px-6 py-16 text-center text-gray-400">
@@ -356,6 +367,23 @@ async function confirmReject() {
                             </div>
                         </div>
                         <div v-else class="flex justify-between"><span class="text-gray-500">Affiliate spots</span><span class="text-gray-900">Unlimited</span></div>
+                    </div>
+
+                    <div v-if="product.platforms?.length || product.content_types?.length || product.brief || product.min_subscribers || product.target_niches?.length || product.free_sample || Number(product.flat_fee) > 0 || product.application_deadline || product.product_url" class="bg-white rounded-2xl border border-gray-100 p-5 space-y-3 text-sm">
+                        <h2 class="font-semibold text-gray-900">Campaign brief</h2>
+                        <div v-if="product.platforms?.length || product.content_types?.length" class="flex flex-wrap gap-1.5">
+                            <span v-for="p in product.platforms" :key="p" class="text-xs px-2.5 py-0.5 rounded-full bg-blue-50 text-blue-700 font-medium">{{ PLATFORM_LABELS[p] || p }}</span>
+                            <span v-for="c in product.content_types" :key="c" class="text-xs px-2.5 py-0.5 rounded-full border border-gray-200 text-gray-600">{{ CONTENT_TYPE_LABELS[c] || c }}</span>
+                            <span v-if="product.posts_required" class="text-xs px-2.5 py-0.5 rounded-full border border-gray-200 text-gray-600">{{ product.posts_required }} post{{ product.posts_required === 1 ? "" : "s" }}</span>
+                        </div>
+                        <p v-if="product.brief" class="text-gray-600 whitespace-pre-line">{{ product.brief }}</p>
+                        <p v-if="product.hashtags" class="text-gray-500"><span class="text-gray-400">Hashtags</span> {{ product.hashtags }}</p>
+                        <p v-if="product.product_url" class="text-gray-500 break-all"><a :href="product.product_url" target="_blank" rel="noopener noreferrer" class="text-blue-600 hover:underline">{{ product.product_url }} ↗</a></p>
+                        <div v-if="product.min_subscribers" class="flex justify-between"><span class="text-gray-500">Min. subscribers</span><span class="text-gray-900">{{ product.min_subscribers.toLocaleString() }}</span></div>
+                        <div v-if="product.target_niches?.length" class="flex justify-between gap-3"><span class="text-gray-500">Niches</span><span class="text-gray-900 capitalize text-right">{{ product.target_niches.join(", ") }}</span></div>
+                        <div v-if="product.free_sample" class="flex justify-between"><span class="text-gray-500">Free sample</span><span class="text-gray-900">Yes</span></div>
+                        <div v-if="Number(product.flat_fee) > 0" class="flex justify-between"><span class="text-gray-500">Flat fee</span><span class="text-gray-900">RM {{ Number(product.flat_fee).toLocaleString("en-MY", { minimumFractionDigits: 2 }) }}</span></div>
+                        <div v-if="product.application_deadline" class="flex justify-between"><span class="text-gray-500">Apply by</span><span class="text-gray-900">{{ formatDate(product.application_deadline) }}</span></div>
                     </div>
 
                     <div v-if="product.variations?.length" class="bg-white rounded-2xl border border-gray-100 p-5">

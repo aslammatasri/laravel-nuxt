@@ -101,7 +101,7 @@ const compact = (n: number) =>
                 Welcome back, {{ authStore.user?.name }} 👋
             </h1>
             <p class="text-gray-500 mt-1">
-                Track your applications and find new products to promote
+                Track your applications and find new campaigns to join
             </p>
         </div>
 
@@ -265,14 +265,14 @@ const compact = (n: number) =>
             <CreatorApplicationsPanel />
         </div>
 
-        <!-- Latest Products in Marketplace -->
+        <!-- Latest Campaigns in Marketplace -->
         <div
             class="bg-white rounded-2xl border border-gray-100 overflow-hidden"
         >
             <div
                 class="px-6 py-4 border-b border-gray-100 flex items-center justify-between"
             >
-                <h2 class="font-semibold text-gray-900">Latest Products</h2>
+                <h2 class="font-semibold text-gray-900">Latest Campaigns</h2>
                 <NuxtLink
                     to="/creator/marketplace"
                     class="text-sm text-green-600 hover:underline"
@@ -289,9 +289,9 @@ const compact = (n: number) =>
                 <div class="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
                     <AppIcon name="marketplace" class="text-green-500" />
                 </div>
-                <p class="font-medium">No products available yet</p>
+                <p class="font-medium">No campaigns available yet</p>
                 <p class="text-sm mt-1">
-                    Check back soon for new products to promote
+                    Check back soon for new campaigns to join
                 </p>
             </div>
 

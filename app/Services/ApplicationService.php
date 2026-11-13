@@ -36,17 +36,22 @@ class ApplicationService
 
             // Business rule 1 — product must be active
             if ($product->status !== 'active') {
-                throw new \Exception('This product is no longer accepting applications', 422);
+                throw new \Exception('This campaign is no longer accepting applications', 422);
+            }
+
+            // Business rule 1b — applications may close before the campaign ends
+            if ($product->application_deadline && $product->application_deadline->endOfDay()->isPast()) {
+                throw new \Exception('Applications for this campaign have closed', 422);
             }
 
             // Business rule 2 — no new application while one is pending or approved
             if ($this->applicationRepository->creatorAlreadyApplied($creatorId, $productId)) {
-                throw new \Exception('You have already applied to this product', 422);
+                throw new \Exception('You have already applied to this campaign', 422);
             }
 
             // Business rule 3 — check max affiliates not exceeded
             if ($product->spots_left !== null && $product->spots_left <= 0) {
-                throw new \Exception('This product has reached its maximum affiliates', 422);
+                throw new \Exception('This campaign has reached its maximum affiliates', 422);
             }
 
             return $this->applicationRepository->create([

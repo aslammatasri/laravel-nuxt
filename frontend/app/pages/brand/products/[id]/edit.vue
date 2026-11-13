@@ -153,7 +153,22 @@ const form = reactive({
     campaign_end: product.value?.campaign_end ?? "",
     max_affiliates: product.value?.max_affiliates ?? "",
     status: product.value?.status ?? "active",
+    ...extrasFrom(product.value),
 });
+
+const fieldErrors = reactive<Record<string, string>>({});
+
+const commissionHint = computed(() => {
+    const rate = Number(form.commission_rate);
+    if (!form.commission_rate || isNaN(rate) || rate <= 0) return "";
+    const money = (n: number) =>
+        "RM " + n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (form.commission_type === "fixed") return `${money(rate)} per sale`;
+    const price = Number(form.price);
+    if (!price) return `${rate}% of each sale`;
+    return `${rate}% of ${money(price)} = ${money((price * rate) / 100)} per sale`;
+});
+
 
 const categories = [
     "beauty",
@@ -167,15 +182,20 @@ const categories = [
 ];
 
 async function handleSubmit() {
+    Object.keys(fieldErrors).forEach((k) => delete fieldErrors[k]);
+    Object.assign(fieldErrors, validateExtras(form, form.campaign_end));
+    if (Object.keys(fieldErrors).length) {
+        error.value = Object.values(fieldErrors).join(" ");
+        return;
+    }
+
     loading.value = true;
     error.value = null;
     imageProblems.value = [];
 
     try {
         const body = new FormData();
-        Object.entries(form).forEach(([k, v]) => {
-            if (v !== "") body.append(k, v as string);
-        });
+        appendFormData(body, form, { clearEmpty: true });
         imageFiles.value.forEach((f) => body.append("images[]", f));
         deleteImagePaths.value.forEach((p) =>
             body.append("delete_images[]", p),
@@ -242,9 +262,9 @@ async function handleSubmit() {
                     to="/brand/products"
                     class="text-sm text-gray-400 hover:text-gray-600 mb-1 inline-flex items-center gap-1"
                 >
-                    ← Back to products
+                    ← Back to campaigns
                 </NuxtLink>
-                <h1 class="text-2xl font-bold text-gray-900">Edit Product</h1>
+                <h1 class="text-2xl font-bold text-gray-900">Edit campaign</h1>
                 <p class="text-gray-500 mt-1">Update your product details</p>
             </div>
         </div>
@@ -404,6 +424,8 @@ async function handleSubmit() {
                     </div>
                 </div>
 
+                <CampaignBrief :form="form" :errors="fieldErrors" />
+
                 <div
                     class="bg-white rounded-2xl border border-gray-100 p-6 space-y-5"
                 >
@@ -424,6 +446,14 @@ async function handleSubmit() {
                             >
                             <DateInput v-model="form.campaign_end" />
                         </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Application deadline <span class="text-gray-400 font-normal">(optional)</span>
+                        </label>
+                        <DateInput v-model="form.application_deadline" :invalid="!!fieldErrors.application_deadline" />
+                        <p v-if="fieldErrors.application_deadline" class="text-xs text-red-500 mt-1">{{ fieldErrors.application_deadline }}</p>
+                        <p v-else class="text-xs text-gray-400 mt-1">Creators cannot apply after this date. Leave empty to accept applications until the campaign ends.</p>
                     </div>
                 </div>
 
@@ -551,6 +581,7 @@ async function handleSubmit() {
                             placeholder="10"
                             class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
+                        <p v-if="commissionHint" class="text-xs text-gray-500 mt-1.5">{{ commissionHint }}</p>
                     </div>
                     <div>
                         <label
@@ -566,6 +597,8 @@ async function handleSubmit() {
                         </select>
                     </div>
                 </div>
+
+                <CampaignPerks :form="form" :errors="fieldErrors" />
 
                 <div
                     class="bg-white rounded-2xl border border-gray-100 p-6 space-y-5"

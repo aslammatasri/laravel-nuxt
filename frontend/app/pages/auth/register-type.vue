@@ -31,7 +31,7 @@ definePageMeta({
                         </div>
                         <h2 class="rt-card-title">I'm a Creator</h2>
                         <p class="rt-card-desc">
-                            Browse products, apply to campaigns and earn
+                            Browse campaigns, apply and earn
                             commissions promoting brands to your audience
                         </p>
                         <div class="rt-chip-list">
@@ -58,8 +58,8 @@ definePageMeta({
                         </div>
                         <h2 class="rt-card-title">I'm a Brand</h2>
                         <p class="rt-card-desc">
-                            List your products, set commission rates and find
-                            the right creators to promote them
+                            Launch campaigns, set commission rates and find
+                            the right creators to promote your products
                         </p>
                         <div class="rt-chip-list">
                             <span class="rt-chip">Pay per sale</span>

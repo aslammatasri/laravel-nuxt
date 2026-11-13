@@ -29,7 +29,7 @@ class BrandVerificationUpdated extends Notification
         return [
             'title'   => $verified ? 'Brand verified' : 'Verification rejected',
             'message' => $verified
-                ? 'Your brand is now verified. A verified badge shows on your products.'
+                ? 'Your brand is now verified. A verified badge shows on your campaigns.'
                 : 'Your verification was rejected: ' . ($this->profile->verification_note ?: 'no reason given') . '. You can update your details and resubmit.',
             'status'  => $this->profile->verification_status,
             'url'     => '/brand/verification',

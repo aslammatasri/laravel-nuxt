@@ -7,7 +7,7 @@ const accentWord = 'revenue'
 const niches = ['Beauty', 'Food', 'Fitness', 'Tech', 'Travel', 'Gaming', 'Lifestyle', 'Parenting', 'Fashion', 'Education']
 
 const features = [
-  { title: 'High commission rates', desc: 'Find products offering up to 30% commission across every category.' },
+  { title: 'High commission rates', desc: 'Find campaigns offering up to 30% commission across every category.' },
   { title: 'Verified Malaysian brands', desc: 'Every brand is SSM-verified. No scams, just real opportunities.' },
   { title: 'Real channel stats', desc: 'Connect your channel so brands see your real reach.' },
   { title: 'Track your earnings', desc: 'See your commissions and monthly growth in one dashboard.' },
@@ -18,13 +18,13 @@ const features = [
 
 const steps = [
   { num: '01', title: 'Create your profile', desc: 'Creators add their channel. Brands add their company.' },
-  { num: '02', title: 'Browse and apply', desc: 'Creators pick products and send a short pitch.' },
+  { num: '02', title: 'Browse and apply', desc: 'Creators pick campaigns and send a short pitch.' },
   { num: '03', title: 'Review applications', desc: 'Brands compare creators by real channel stats.' },
   { num: '04', title: 'Promote and earn', desc: 'Share your link. Commissions land in your dashboard.' },
 ]
 
-const creatorChecklist = ['Join as a creator for free', 'Showcase your real channel stats', 'Apply to commission products']
-const brandChecklist = ['List your products in minutes', 'Connect directly with creators', 'Only pay for real results']
+const creatorChecklist = ['Join as a creator for free', 'Showcase your real channel stats', 'Apply to commission campaigns']
+const brandChecklist = ['Launch a campaign in minutes', 'Connect directly with creators', 'Only pay for real results']
 
 const dashboardTo = computed(() => roleHome(authStore.user?.role))
 
@@ -56,7 +56,7 @@ const commands = computed<Command[]>(() => {
     list.push(
       { label: 'Log in', hint: 'Open', run: () => navigateTo('/auth/login') },
       { label: 'Join as a creator', hint: 'Sign up', run: () => navigateTo('/auth/register-type?role=creator') },
-      { label: 'List your products', hint: 'Sign up', run: () => navigateTo('/auth/register-type?role=brand') },
+      { label: 'Launch a campaign', hint: 'Sign up', run: () => navigateTo('/auth/register-type?role=brand') },
     )
   }
   return list
@@ -213,13 +213,13 @@ onBeforeUnmount(() => {
       <section class="doors wrap">
         <p class="doors__lede">
           AffiliateMY connects Malaysian content creators with local brands.
-          Show your real channel stats, apply to high-commission products, and start earning.
+          Show your real channel stats, apply to high-commission campaigns, and start earning.
         </p>
 
         <div class="doors__grid">
           <article id="creators" class="door door--creator">
             <h2>For creators</h2>
-            <p class="door__desc">Browse high-commission products, connect your channel and start earning.</p>
+            <p class="door__desc">Browse high-commission campaigns, connect your channel and start earning.</p>
             <ul class="checks">
               <li v-for="item in creatorChecklist" :key="item"><AppIcon name="check" class="checks__icon" />{{ item }}</li>
             </ul>
@@ -228,11 +228,11 @@ onBeforeUnmount(() => {
 
           <article id="brands" class="door door--brand">
             <h2>For brands</h2>
-            <p class="door__desc">Find the right creators for your products, backed by real channel stats.</p>
+            <p class="door__desc">Find the right creators for your campaigns, backed by real channel stats.</p>
             <ul class="checks">
               <li v-for="item in brandChecklist" :key="item"><AppIcon name="check" class="checks__icon" />{{ item }}</li>
             </ul>
-            <NuxtLink to="/auth/register-type?role=brand" class="btn btn--marigold">List your products</NuxtLink>
+            <NuxtLink to="/auth/register-type?role=brand" class="btn btn--marigold">Launch a campaign</NuxtLink>
           </article>
         </div>
       </section>

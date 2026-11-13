@@ -16,6 +16,9 @@ interface Product {
     commission_type: string;
     brand: { name: string; avatar?: string | null; brand_profile?: { is_verified: boolean } | null };
     my_application_status: 'pending' | 'approved' | 'rejected' | null;
+    platforms?: string[] | null;
+    free_sample?: boolean;
+    flat_fee?: string | number | null;
 }
 
 const config = useRuntimeConfig();
@@ -166,7 +169,7 @@ const commissionTier = (rate: number | string) => {
             <div>
                 <h1 class="mp-title">Marketplace</h1>
                 <p class="mp-subtitle">
-                    Find products to promote and earn commissions
+                    Find campaigns to join and earn commissions
                 </p>
             </div>
             <p v-if="products?.total" class="mp-total">
@@ -184,9 +187,9 @@ const commissionTier = (rate: number | string) => {
                 <input
                     v-model="filters.search"
                     type="text"
-                    placeholder="Search products by name or description"
+                    placeholder="Search campaigns by name or description"
                     class="mp-search__input"
-                    aria-label="Search products"
+                    aria-label="Search campaigns"
                 />
                 <button
                     v-if="filters.search"
@@ -300,7 +303,7 @@ const commissionTier = (rate: number | string) => {
         <!-- Empty state -->
         <div v-if="!products?.data?.length" class="mp-empty">
             <div class="mp-empty__icon"><AppIcon name="marketplace" /></div>
-            <p class="mp-empty__title">No products found</p>
+            <p class="mp-empty__title">No campaigns found</p>
             <p class="mp-empty__desc">Try a different search or loosen your filters.</p>
             <button v-if="hasActiveFilters" type="button" class="mp-empty__btn" @click="resetAll">
                 Clear all filters
@@ -340,6 +343,16 @@ const commissionTier = (rate: number | string) => {
                         </NuxtLink>
                     </h3>
                     <p class="mp-card__desc">{{ product.description }}</p>
+
+                    <ul
+                        v-if="product.platforms?.length || product.free_sample || Number(product.flat_fee) > 0"
+                        class="mp-tags"
+                        aria-label="Campaign details"
+                    >
+                        <li v-for="p in product.platforms" :key="p" class="mp-tag">{{ PLATFORM_LABELS[p] || p }}</li>
+                        <li v-if="product.free_sample" class="mp-tag mp-tag--perk">Free sample</li>
+                        <li v-if="Number(product.flat_fee) > 0" class="mp-tag mp-tag--perk">+ RM {{ Number(product.flat_fee).toLocaleString("en-MY") }} fee</li>
+                    </ul>
 
                     <dl class="mp-card__stats">
                         <div>
@@ -923,6 +936,27 @@ a:focus-visible {
     line-height: 1.5;
 }
 
+.mp-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+    margin: 0.7rem 0 0;
+    padding: 0;
+    list-style: none;
+}
+.mp-tag {
+    padding: 0.1rem 0.5rem;
+    border: 1px solid var(--mp-rule);
+    border-radius: 9999px;
+    font-size: 0.7rem;
+    color: var(--mp-muted);
+}
+.mp-tag--perk {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+    color: #15803d;
+    font-weight: 600;
+}
 .mp-verified {
     margin-left: 0.25rem;
     padding: 0.05rem 0.4rem;

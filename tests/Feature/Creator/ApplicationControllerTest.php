@@ -67,7 +67,7 @@ class ApplicationControllerTest extends TestCase
         ]);
 
         $response->assertStatus(422)
-            ->assertJson(['message' => 'You have already applied to this product']);
+            ->assertJson(['message' => 'You have already applied to this campaign']);
         $this->assertSame(1, ProductApplication::where('product_id', $product->id)->count());
     }
 
@@ -91,7 +91,7 @@ class ApplicationControllerTest extends TestCase
         ]);
 
         $response->assertStatus(422)
-            ->assertJson(['message' => 'You have already applied to this product']);
+            ->assertJson(['message' => 'You have already applied to this campaign']);
     }
 
     public function test_creator_can_reapply_after_rejection(): void
