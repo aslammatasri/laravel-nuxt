@@ -4,7 +4,7 @@ const { collapsed, toggle } = useSidebar()
 
 const navItems = [
   { label: 'Dashboard',    icon: 'dashboard',    to: '/brand/dashboard'    },
-  { label: 'Products',     icon: 'products',     to: '/brand/products'     },
+  { label: 'Campaigns',    icon: 'products',     to: '/brand/products'     },
   { label: 'Applications', icon: 'applications', to: '/brand/applications' },
   { label: 'Creators',     icon: 'creators',     to: '/brand/creators'     },
   { label: 'Messages',     icon: 'messages',     to: '/messages'           },

@@ -46,7 +46,19 @@ const form = reactive({
     campaign_start: "",
     campaign_end: "",
     max_affiliates: "",
+    ...emptyExtras(),
 });
+const commissionHint = computed(() => {
+    const rate = Number(form.commission_rate);
+    if (!form.commission_rate || isNaN(rate) || rate <= 0) return "";
+    const money = (n: number) =>
+        "RM " + n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (form.commission_type === "fixed") return `${money(rate)} per sale`;
+    const price = Number(form.price);
+    if (!price) return `${rate}% of each sale`;
+    return `${rate}% of ${money(price)} = ${money((price * rate) / 100)} per sale`;
+});
+
 
 interface VariationOption {
     _key: number;
@@ -136,6 +148,8 @@ function validate(): boolean {
     else if (form.campaign_start && form.campaign_end <= form.campaign_start)
         fieldErrors.campaign_end = "End date must be after the start date.";
 
+    Object.assign(fieldErrors, validateExtras(form, form.campaign_end));
+
     if (form.max_affiliates !== "") {
         const n = Number(form.max_affiliates);
         if (!Number.isInteger(n) || n < 1) fieldErrors.max_affiliates = "Use a whole number of 1 or more, or leave empty for unlimited.";
@@ -209,9 +223,7 @@ async function handleSubmit() {
         // On a retry the product already exists: only the variations are left
         if (createdProductId.value === null) {
             const body = new FormData();
-            Object.entries(form).forEach(([k, v]) => {
-                if (v !== "") body.append(k, v as string);
-            });
+            appendFormData(body, form);
             imageFiles.value.forEach((f) => body.append("images[]", f));
 
             const product = await $api<{ id: number }>("/brand/products", {
@@ -248,10 +260,10 @@ async function handleSubmit() {
                     to="/brand/products"
                     class="text-sm text-gray-400 hover:text-gray-600 mb-1 inline-flex items-center gap-1"
                 >
-                    ← Back to products
+                    ← Back to campaigns
                 </NuxtLink>
                 <h1 class="text-2xl font-bold text-gray-900">
-                    Add New Product
+                    Create campaign
                 </h1>
             </div>
         </div>
@@ -278,7 +290,7 @@ async function handleSubmit() {
                 <div
                     class="bg-white rounded-2xl border border-gray-100 p-6 space-y-5"
                 >
-                    <h2 class="font-semibold text-gray-900">Product Info</h2>
+                    <h2 class="font-semibold text-gray-900">Product</h2>
 
                     <!-- Image upload -->
                     <div>
@@ -423,6 +435,8 @@ async function handleSubmit() {
                     </div>
                 </div>
 
+                <CampaignBrief :form="form" :errors="fieldErrors" />
+
                 <div
                     class="bg-white rounded-2xl border border-gray-100 p-6 space-y-5"
                 >
@@ -451,6 +465,14 @@ async function handleSubmit() {
                             />
                             <p v-if="fieldErrors.campaign_end" class="text-xs text-red-500 mt-1">{{ fieldErrors.campaign_end }}</p>
                         </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">
+                            Application deadline <span class="text-gray-400 font-normal">(optional)</span>
+                        </label>
+                        <DateInput v-model="form.application_deadline" :invalid="!!fieldErrors.application_deadline" />
+                        <p v-if="fieldErrors.application_deadline" class="text-xs text-red-500 mt-1">{{ fieldErrors.application_deadline }}</p>
+                        <p v-else class="text-xs text-gray-400 mt-1">Creators cannot apply after this date. Leave empty to accept applications until the campaign ends.</p>
                     </div>
                 </div>
 
@@ -584,6 +606,7 @@ async function handleSubmit() {
                             :class="{ 'border-red-300! focus:ring-red-400!': fieldErrors.commission_rate }"
                         />
                         <p v-if="fieldErrors.commission_rate" class="text-xs text-red-500 mt-1">{{ fieldErrors.commission_rate }}</p>
+                        <p v-if="commissionHint" class="text-xs text-gray-500 mt-1.5">{{ commissionHint }}</p>
                     </div>
                     <div>
                         <label
@@ -599,6 +622,8 @@ async function handleSubmit() {
                         </select>
                     </div>
                 </div>
+
+                <CampaignPerks :form="form" :errors="fieldErrors" />
 
                 <div
                     class="bg-white rounded-2xl border border-gray-100 p-6 space-y-5"
@@ -632,7 +657,7 @@ async function handleSubmit() {
                     :disabled="loading"
                     class="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold rounded-xl py-3.5 text-sm transition-colors"
                 >
-                    {{ loading ? "Creating..." : "Create Product" }}
+                    {{ loading ? "Creating..." : "Create campaign" }}
                 </button>
             </div>
         </div>

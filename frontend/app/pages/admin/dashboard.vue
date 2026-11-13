@@ -94,7 +94,7 @@ const verifRows = computed(() => [
                 <p class="text-3xl font-bold text-gray-900">{{ users.brands }}</p>
             </div>
             <div class="bg-white rounded-2xl p-5 border border-gray-100">
-                <p class="text-sm text-gray-500">Products</p>
+                <p class="text-sm text-gray-500">Campaigns</p>
                 <p class="text-3xl font-bold text-gray-900">{{ products.total }}</p>
             </div>
             <NuxtLink to="/admin/users?status=suspended" class="rounded-2xl p-5 border border-red-100 bg-red-50 hover:bg-red-100 transition-colors">
@@ -140,7 +140,7 @@ const verifRows = computed(() => [
 
             <!-- Products -->
             <div class="bg-white rounded-2xl border border-gray-100 p-6">
-                <h2 class="font-semibold text-gray-900 mb-4">Products</h2>
+                <h2 class="font-semibold text-gray-900 mb-4">Campaigns</h2>
                 <p class="text-3xl font-bold text-gray-900">{{ products.total }}</p>
                 <p class="text-sm text-gray-500 mb-4">listed on the platform</p>
                 <div class="h-3 w-full rounded-full bg-gray-100 overflow-hidden">

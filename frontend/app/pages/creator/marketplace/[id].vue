@@ -49,6 +49,18 @@ interface Product {
     brand: { name: string; avatar?: string | null; brand_profile?: { is_verified: boolean } | null };
     variations: Variation[];
     my_application_status: 'pending' | 'approved' | 'rejected' | null;
+    my_subscribers?: number;
+    platforms?: string[] | null;
+    content_types?: string[] | null;
+    posts_required?: number | null;
+    brief?: string | null;
+    hashtags?: string | null;
+    product_url?: string | null;
+    min_subscribers?: number | null;
+    target_niches?: string[] | null;
+    free_sample?: boolean;
+    flat_fee?: string | number | null;
+    application_deadline?: string | null;
 }
 
 const config = useRuntimeConfig();
@@ -61,6 +73,77 @@ const { data: product } = await useAsyncData(
 const hasActiveApplication = computed(() =>
     ['pending', 'approved'].includes(product.value?.my_application_status ?? ''),
 );
+
+const hasBrief = computed(() => {
+    const p = product.value;
+    return !!(p?.platforms?.length || p?.content_types?.length || p?.brief || p?.hashtags || p?.product_url);
+});
+const hasRequirements = computed(() => {
+    const p = product.value;
+    return !!(p?.min_subscribers || p?.target_niches?.length);
+});
+const meetsMinimum = computed(() => {
+    const min = product.value?.min_subscribers;
+    return !min || (product.value?.my_subscribers ?? 0) >= min;
+});
+const compact = (n: number) => new Intl.NumberFormat("en", { notation: "compact" }).format(n);
+const deadlineClosed = computed(() => {
+    const d = product.value?.application_deadline;
+    return !!d && new Date(d).getTime() + 86400000 < Date.now();
+});
+
+const money = (n: number) =>
+    "RM " + n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const isPercent = computed(() => product.value?.commission_type === "percentage");
+const rateNumber = computed(() => Number(product.value?.commission_rate ?? 0));
+const figure = computed(() =>
+    isPercent.value
+        ? { prefix: "", num: String(rateNumber.value), unit: "%" }
+        : { prefix: "RM", num: rateNumber.value.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 }), unit: "" },
+);
+const offerHeadline = computed(() =>
+    isPercent.value ? "commission on every sale you drive." : "paid for every sale you drive.",
+);
+const earnExample = computed(() => {
+    const price = Number(product.value?.price ?? 0);
+    if (!isPercent.value || !price || !rateNumber.value) return "";
+    return `On a ${money(price)} sale you earn ${money((price * rateNumber.value) / 100)}.`;
+});
+const hasFlatFee = computed(() => Number(product.value?.flat_fee ?? 0) > 0);
+
+function daysUntil(d: string | null | undefined) {
+    if (!d) return null;
+    const ms = new Date(d).getTime() - new Date().setHours(0, 0, 0, 0);
+    return Math.ceil(ms / 86400000);
+}
+function countdown(d: string | null | undefined) {
+    const n = daysUntil(d);
+    if (n === null) return "";
+    if (n < 0) return "Closed";
+    if (n === 0) return "Today";
+    return `${n} day${n === 1 ? "" : "s"} left`;
+}
+
+const stats = computed(() => {
+    const p = product.value;
+    if (!p) return [];
+    const list: { key: string; label: string; value: string; sub?: string; pct?: number | null }[] = [
+        { key: "price", label: "Product price", value: money(Number(p.price ?? 0)) },
+        { key: "ends", label: "Campaign ends", value: formatDate(p.campaign_end), sub: countdown(p.campaign_end) },
+    ];
+    if (p.application_deadline)
+        list.push({ key: "deadline", label: "Apply by", value: formatDate(p.application_deadline), sub: countdown(p.application_deadline) });
+    if (p.posts_required)
+        list.push({ key: "posts", label: "Per creator", value: `${p.posts_required} post${p.posts_required === 1 ? "" : "s"}` });
+    list.push({
+        key: "spots",
+        label: "Spots left",
+        value: p.spots_left == null ? "Unlimited" : String(p.spots_left),
+        pct: spotsTakenPct.value,
+    });
+    return list;
+});
 
 const commissionLabel = computed(() => {
     if (!product.value) return "";
@@ -120,6 +203,42 @@ async function handleApply() {
         <div v-if="product" class="pd-grid">
             <!-- Left: product -->
             <div class="pd-main">
+                <!-- Offer -->
+                <header class="pd-hero">
+                    <p class="pd-meta">
+                        <span class="pd-cat">{{ product.category }}</span>
+                        <span v-if="product.brand?.name" class="pd-brand pd-brand--row">
+                            <Avatar :src="product.brand.avatar" :name="product.brand.name" size="xs" />
+                            by {{ product.brand.name }}
+                            <span v-if="product.brand.brand_profile?.is_verified" class="pd-verified" title="Verified brand">✓ Verified</span>
+                        </span>
+                    </p>
+                    <h1 class="pd-title">{{ product.name }}</h1>
+
+                    <div class="pd-offer">
+                        <p class="pd-figure" :aria-label="`${figure.prefix} ${figure.num}${figure.unit} commission`">
+                            <span v-if="figure.prefix" class="pd-figure__unit">{{ figure.prefix }}</span>
+                            <span class="pd-figure__num">{{ figure.num }}</span>
+                            <span v-if="figure.unit" class="pd-figure__unit">{{ figure.unit }}</span>
+                        </p>
+                        <div class="pd-offer__words">
+                            <p class="pd-offer__headline">{{ offerHeadline }}</p>
+                            <p v-if="earnExample" class="pd-offer__sub">{{ earnExample }}</p>
+                            <ul v-if="hasFlatFee || product.free_sample" class="pd-chips" aria-label="Extra perks">
+                                <li v-if="hasFlatFee" class="pd-chip pd-chip--strong">+ {{ money(Number(product.flat_fee)) }} flat fee</li>
+                                <li v-if="product.free_sample" class="pd-chip pd-chip--strong">Free sample included</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <a v-if="!success && !hasActiveApplication && !deadlineClosed" href="#apply" class="pd-jump">
+                        Apply to join
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M10 4v11m-4-4 4 4 4-4" stroke-linecap="round" stroke-linejoin="round" /></svg>
+                    </a>
+
+                    <p v-if="product.description" class="pd-desc">{{ product.description }}</p>
+                </header>
+
                 <!-- Gallery -->
                 <section class="pd-gallery" aria-label="Product images">
                     <div class="pd-stage">
@@ -165,67 +284,77 @@ async function handleApply() {
                     </ul>
                 </section>
 
-                <!-- Intro -->
-                <section class="pd-intro">
-                    <p class="pd-meta">
-                        <span class="pd-cat">{{ product.category }}</span>
-                        <span v-if="product.brand?.name" class="pd-brand pd-brand--row">
-                            <Avatar :src="product.brand.avatar" :name="product.brand.name" size="xs" />
-                            by {{ product.brand.name }}
-                            <span v-if="product.brand.brand_profile?.is_verified" class="pd-verified" title="Verified brand">✓ Verified</span>
-                        </span>
-                    </p>
-                    <h1 class="pd-title">{{ product.name }}</h1>
-                    <p class="pd-desc">{{ product.description }}</p>
-                </section>
+                <!-- At a glance -->
+                <dl class="pd-stats">
+                    <div v-for="st in stats" :key="st.key" class="pd-stat">
+                        <dt>{{ st.label }}</dt>
+                        <dd>{{ st.value }}</dd>
+                        <p v-if="st.sub" class="pd-stat__sub">{{ st.sub }}</p>
+                        <div v-if="st.pct !== undefined && st.pct !== null" class="pd-spots__track" role="img" :aria-label="`${st.pct}% of spots taken`">
+                            <div class="pd-spots__fill" :style="{ width: st.pct + '%' }"></div>
+                        </div>
+                    </div>
+                </dl>
 
-                <!-- Variations -->
-                <section v-if="product.variations?.length" class="pd-vars">
-                    <h2 class="pd-h2">Variations</h2>
-                    <div v-for="variation in product.variations" :key="variation.id" class="pd-var">
-                        <p class="pd-var__name">{{ variation.name }}</p>
-                        <ul class="pd-var__opts">
-                            <li v-for="option in variation.options" :key="option.value" class="pd-opt">
-                                {{ option.value }}
-                                <span class="pd-opt__price">RM {{ option.price.toFixed(2) }}</span>
+                <!-- Brief document -->
+                <article v-if="hasBrief || hasRequirements || product.variations?.length" class="pd-doc">
+                    <section v-if="hasBrief" class="pd-doc__sec">
+                        <h2 class="pd-h2">What you will do</h2>
+                        <ul v-if="product.platforms?.length || product.content_types?.length || product.posts_required" class="pd-chips">
+                            <li v-for="p in product.platforms" :key="p" class="pd-chip pd-chip--strong">{{ PLATFORM_LABELS[p] || p }}</li>
+                            <li v-for="c in product.content_types" :key="c" class="pd-chip">{{ CONTENT_TYPE_LABELS[c] || c }}</li>
+                            <li v-if="product.posts_required" class="pd-chip">
+                                {{ product.posts_required }} post{{ product.posts_required === 1 ? "" : "s" }}
                             </li>
                         </ul>
-                    </div>
-                </section>
+                        <p v-if="product.brief" class="pd-brief__text">{{ product.brief }}</p>
+                        <p v-if="product.hashtags" class="pd-brief__row"><span>Hashtags</span> {{ product.hashtags }}</p>
+                        <p v-if="product.product_url" class="pd-brief__row">
+                            <span>Product page</span>
+                            <a :href="product.product_url" target="_blank" rel="noopener noreferrer" class="pd-link">{{ product.product_url }} ↗</a>
+                        </p>
+                    </section>
+
+                    <section v-if="hasRequirements" class="pd-doc__sec">
+                        <h2 class="pd-h2">Who can apply</h2>
+                        <p
+                            v-if="product.min_subscribers"
+                            class="pd-qualify"
+                            :class="meetsMinimum ? 'is-ok' : 'is-low'"
+                            role="status"
+                        >
+                            <span aria-hidden="true">{{ meetsMinimum ? "✓" : "!" }}</span>
+                            <span>
+                                {{
+                                    meetsMinimum
+                                        ? `You meet the ${product.min_subscribers.toLocaleString()} subscriber minimum (you have ${compact(product.my_subscribers ?? 0)}).`
+                                        : `This campaign asks for ${product.min_subscribers.toLocaleString()} subscribers. You have ${compact(product.my_subscribers ?? 0)}.`
+                                }}
+                            </span>
+                        </p>
+                        <ul v-if="product.target_niches?.length" class="pd-chips">
+                            <li v-for="n in product.target_niches" :key="n" class="pd-chip">{{ n }}</li>
+                        </ul>
+                    </section>
+
+                    <section v-if="product.variations?.length" class="pd-doc__sec">
+                        <h2 class="pd-h2">Variations</h2>
+                        <div v-for="variation in product.variations" :key="variation.id" class="pd-var">
+                            <p class="pd-var__name">{{ variation.name }}</p>
+                            <ul class="pd-var__opts">
+                                <li v-for="option in variation.options" :key="option.value" class="pd-opt">
+                                    {{ option.value }}
+                                    <span class="pd-opt__price">RM {{ option.price.toFixed(2) }}</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </section>
+                </article>
             </div>
 
             <!-- Right: facts + apply -->
             <aside class="pd-side">
-                <div class="pd-card">
-                    <div class="pd-rate">
-                        <p class="pd-rate__label">Commission</p>
-                        <p class="pd-rate__value">{{ commissionLabel }}</p>
-                    </div>
-
-                    <dl class="pd-facts">
-                        <div>
-                            <dt>Price</dt>
-                            <dd>RM {{ product.price }}</dd>
-                        </div>
-                        <div>
-                            <dt>Campaign ends</dt>
-                            <dd>{{ formatDate(product.campaign_end) }}</dd>
-                        </div>
-                        <div>
-                            <dt>Spots left</dt>
-                            <dd>{{ product.spots_left ?? "Unlimited" }}</dd>
-                        </div>
-                    </dl>
-
-                    <div v-if="spotsTakenPct !== null" class="pd-spots">
-                        <div class="pd-spots__track" role="img" :aria-label="`${spotsTakenPct}% of spots taken`">
-                            <div class="pd-spots__fill" :style="{ width: spotsTakenPct + '%' }"></div>
-                        </div>
-                        <p class="pd-spots__text">{{ spotsTakenPct }}% of spots taken</p>
-                    </div>
-
-                    <hr class="pd-rule" />
-
+                <div id="apply" class="pd-card">
                     <!-- Success -->
                     <div v-if="success" class="pd-success">
                         <span class="pd-success__icon" aria-hidden="true">
@@ -250,11 +379,18 @@ async function handleApply() {
                         <p class="pd-success__text">
                             {{
                                 product?.my_application_status === "approved"
-                                    ? "You are approved to promote this product."
+                                    ? "You are approved to join this campaign."
                                     : "You already applied. The brand is reviewing your application."
                             }}
                         </p>
                         <NuxtLink to="/creator/dashboard#applications" class="pd-btn">View my applications</NuxtLink>
+                    </div>
+
+                    <!-- Applications closed -->
+                    <div v-else-if="deadlineClosed" class="pd-success">
+                        <h2 class="pd-success__title">Applications closed</h2>
+                        <p class="pd-success__text">The brand stopped accepting applications on {{ formatDate(product?.application_deadline ?? null) }}.</p>
+                        <NuxtLink to="/creator/marketplace" class="pd-btn pd-btn--ghost">Browse more</NuxtLink>
                     </div>
 
                     <!-- Apply -->
@@ -295,7 +431,7 @@ async function handleApply() {
 
         <!-- Not found -->
         <div v-else class="pd-missing">
-            <p class="pd-missing__title">Product not found</p>
+            <p class="pd-missing__title">Campaign not found</p>
             <p class="pd-missing__text">It may have been removed or the campaign has closed.</p>
             <NuxtLink to="/creator/marketplace" class="pd-btn">Back to marketplace</NuxtLink>
         </div>
@@ -303,6 +439,210 @@ async function handleApply() {
 </template>
 
 <style scoped>
+/* ── Offer hero (Stat-Led) ───────────────────────────────── */
+.pd-hero {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+}
+.pd-offer {
+    display: grid;
+    gap: 0.5rem 1.5rem;
+    align-items: end;
+    padding: 1.25rem 0;
+    border-top: 1px solid var(--pd-rule);
+    border-bottom: 1px solid var(--pd-rule);
+}
+.pd-figure {
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 0.15em;
+    font-variant-numeric: tabular-nums;
+    line-height: 0.9;
+    color: var(--pd-green-700);
+}
+.pd-figure__num {
+    font-size: clamp(3.5rem, 11vw, 5.5rem);
+    font-weight: 800;
+    letter-spacing: -0.05em;
+}
+.pd-figure__unit {
+    font-size: clamp(1.5rem, 4vw, 2.25rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+}
+.pd-offer__words {
+    min-width: 0;
+}
+.pd-offer__headline {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    letter-spacing: -0.015em;
+    line-height: 1.3;
+}
+.pd-offer__sub {
+    margin: 0.25rem 0 0;
+    font-size: 0.9rem;
+    color: var(--pd-muted);
+    font-variant-numeric: tabular-nums;
+}
+.pd-jump {
+    justify-self: start;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-height: 2.5rem;
+    padding: 0 1rem;
+    border: 1px solid var(--pd-green-700);
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--pd-green-700);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background-color 0.2s var(--pd-ease), color 0.2s var(--pd-ease);
+}
+.pd-jump svg {
+    width: 1rem;
+    height: 1rem;
+}
+.pd-jump:hover {
+    background: var(--pd-green-50);
+}
+.pd-jump:active {
+    background: var(--pd-green-100);
+}
+.pd-jump:focus-visible {
+    outline: 2px solid var(--pd-green-700);
+    outline-offset: 2px;
+}
+.pd-desc {
+    max-width: 62ch;
+}
+
+/* ── At-a-glance stats: hairline blocks, no cards ───────── */
+.pd-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+    margin: 0;
+    border-top: 1px solid var(--pd-rule);
+    border-bottom: 1px solid var(--pd-rule);
+}
+.pd-stat {
+    min-width: 0;
+    padding: 0.9rem 1rem;
+    border-left: 1px solid var(--pd-rule);
+}
+.pd-stat:first-child {
+    padding-left: 0;
+    border-left: 0;
+}
+.pd-stat dt {
+    font-size: 0.75rem;
+    color: var(--pd-muted);
+}
+.pd-stat dd {
+    margin: 0.2rem 0 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+}
+.pd-stat__sub {
+    margin: 0.15rem 0 0;
+    font-size: 0.75rem;
+    color: var(--pd-muted);
+}
+
+/* ── Brief document: one card, hairline-divided sections ── */
+.pd-doc {
+    border: 1px solid var(--pd-rule);
+    border-radius: var(--pd-radius);
+    background: var(--pd-paper);
+}
+.pd-doc__sec {
+    display: grid;
+    gap: 0.75rem;
+    padding: 1.25rem 1.5rem;
+}
+.pd-doc__sec + .pd-doc__sec {
+    border-top: 1px solid var(--pd-rule);
+}
+.pd-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+.pd-chip {
+    padding: 0.25rem 0.7rem;
+    border: 1px solid var(--pd-rule);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    color: var(--pd-ink-2);
+    text-transform: capitalize;
+}
+.pd-chip--strong {
+    border-color: var(--pd-green-100);
+    background: var(--pd-green-50);
+    color: var(--pd-green-700);
+    font-weight: 600;
+    text-transform: none;
+}
+.pd-brief__text {
+    margin: 0;
+    max-width: 65ch;
+    font-size: 0.95rem;
+    line-height: 1.65;
+    color: var(--pd-ink-2);
+    white-space: pre-line;
+}
+.pd-brief__row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--pd-ink-2);
+}
+.pd-brief__row > span {
+    min-width: 7rem;
+    color: var(--pd-muted);
+}
+.pd-link {
+    color: var(--pd-green-700);
+    text-decoration: underline;
+    overflow-wrap: anywhere;
+}
+.pd-qualify {
+    display: flex;
+    gap: 0.6rem;
+    align-items: flex-start;
+    margin: 0;
+    padding: 0.7rem 0.9rem;
+    border: 1px solid;
+    border-radius: var(--pd-radius-sm);
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+.pd-qualify.is-ok {
+    border-color: var(--pd-green-100);
+    background: var(--pd-green-50);
+    color: var(--pd-green-800);
+}
+.pd-qualify.is-low {
+    border-color: var(--pd-amber-200);
+    background: var(--pd-amber-50);
+    color: var(--pd-amber-700);
+}
+.pd-qualify > span:first-child {
+    font-weight: 800;
+}
 .pd-brand--row {
     display: inline-flex;
     align-items: center;
@@ -312,19 +652,19 @@ async function handleApply() {
     margin-left: 0.35rem;
     padding: 0.05rem 0.45rem;
     border-radius: 9999px;
-    background: #f0fdf4;
-    color: #15803d;
+    background: var(--pd-green-50);
+    color: var(--pd-green-700);
     font-size: 0.7rem;
     font-weight: 600;
     white-space: nowrap;
 }
 @import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap");
 
-/* Hallmark · genre: modern-minimal (app page) · macrostructure: Split Studio (content left, sticky apply panel right) · theme: existing creator scheme (Tailwind green + gray, red errors) · enrichment: none
- * audience: creators deciding whether to apply · use: read the offer, then submit a pitch · tone: utilitarian, calm
- * motion: gallery crossfade only (opacity), disabled under reduced-motion
- * colours are the page's original Tailwind values as OKLCH tokens; the filled button uses green-700 so white text passes AA
- * pre-emit critique: P4 H4 E4 S4 R5 V4 */
+/* Hallmark · genre: modern-minimal (app page) · macrostructure: Stat-Led (commission figure leads; sticky apply panel right) · theme: existing creator scheme (green + neutral grey, amber for caution) · enrichment: none
+ * audience: creators deciding whether a campaign is worth applying to · use: see what they earn, what they must do, whether they qualify, then apply · tone: utilitarian, calm
+ * motion: gallery crossfade + chip hover only (opacity / colour), disabled under reduced-motion; no number counter (cut)
+ * every colour is a --pd-* token; the only figures shown are the campaign's own data
+ * pre-emit critique: P4 H5 E4 S5 R5 V4 */
 
 .pd-page {
     --pd-ink: oklch(21% 0.034 264.7);
@@ -342,6 +682,9 @@ async function handleApply() {
     --pd-green-800: oklch(44.8% 0.119 151.3);
     --pd-green-50: oklch(98.2% 0.018 155.8);
     --pd-green-100: oklch(96.2% 0.044 156.7);
+    --pd-amber-700: oklch(55.5% 0.163 48.4);
+    --pd-amber-50: oklch(98.7% 0.022 95.3);
+    --pd-amber-200: oklch(92.4% 0.12 95.7);
     --pd-red: oklch(57.7% 0.245 27.3);
     --pd-red-50: oklch(97.1% 0.013 17.4);
     --pd-radius: 14px;
@@ -403,7 +746,9 @@ async function handleApply() {
 }
 .pd-stage {
     position: relative;
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 16 / 10;
+    max-height: 26rem;
+    width: 100%;
     overflow: hidden;
     background: var(--pd-paper-3);
     border: 1px solid var(--pd-rule);
@@ -542,12 +887,6 @@ async function handleApply() {
 }
 
 /* ── Variations ───────────────────────────────────────────── */
-.pd-vars {
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--pd-rule);
-    display: grid;
-    gap: 1rem;
-}
 .pd-h2 {
     margin: 0;
     font-size: 0.95rem;
@@ -591,44 +930,6 @@ async function handleApply() {
     border-radius: var(--pd-radius);
     background: var(--pd-paper);
 }
-.pd-rate {
-    padding: 1rem;
-    border-radius: var(--pd-radius-sm);
-    background: var(--pd-green-50);
-}
-.pd-rate__label {
-    margin: 0;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: var(--pd-green-700);
-}
-.pd-rate__value {
-    margin: 0.15rem 0 0;
-    font-size: 2rem;
-    font-weight: 800;
-    letter-spacing: -0.03em;
-    line-height: 1.15;
-    color: var(--pd-green-700);
-}
-.pd-facts {
-    margin: 1rem 0 0;
-}
-.pd-facts > div {
-    display: flex;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.65rem 0;
-    border-bottom: 1px solid var(--pd-rule-soft);
-    font-size: 0.875rem;
-}
-.pd-facts dt {
-    color: var(--pd-muted);
-}
-.pd-facts dd {
-    margin: 0;
-    font-weight: 600;
-    text-align: right;
-}
 .pd-spots {
     margin-top: 0.9rem;
 }
@@ -647,11 +948,6 @@ async function handleApply() {
     margin: 0.4rem 0 0;
     font-size: 0.75rem;
     color: var(--pd-muted);
-}
-.pd-rule {
-    margin: 1.25rem 0;
-    border: 0;
-    border-top: 1px solid var(--pd-rule);
 }
 
 /* ── Form ─────────────────────────────────────────────────── */
@@ -807,6 +1103,11 @@ async function handleApply() {
 }
 
 /* ── Wider screens ────────────────────────────────────────── */
+@media (min-width: 40rem) {
+    .pd-offer {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+}
 @media (min-width: 64rem) {
     .pd-grid {
         grid-template-columns: minmax(0, 1fr) 22rem;

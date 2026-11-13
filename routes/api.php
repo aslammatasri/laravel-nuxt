@@ -102,6 +102,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('products/{id}/apply',    [CreatorApplicationController::class, 'store']);
         Route::get('applications',            [CreatorApplicationController::class, 'index']);
         Route::get('collaborations',          [CollaborationController::class, 'index']);
+        Route::post('collaborations/{id}/tasks',               [CollaborationController::class, 'storeTask']);
+        Route::patch('collaborations/{id}/tasks/{taskId}',     [CollaborationController::class, 'updateTask']);
+        Route::delete('collaborations/{id}/tasks/{taskId}',    [CollaborationController::class, 'destroyTask']);
         Route::get('social-accounts',            [SocialAccountController::class, 'index']);
         Route::post('social-accounts/youtube',   [SocialAccountController::class, 'store']);
         Route::post('social-accounts/{id}/sync', [SocialAccountController::class, 'sync']);
