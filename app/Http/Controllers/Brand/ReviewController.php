@@ -6,6 +6,7 @@ use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\CollaborationTask;
 use App\Models\ProductApplication;
+use App\Notifications\TaskReviewed;
 use Illuminate\Http\Request;
 
 class ReviewController extends Controller
@@ -24,11 +25,17 @@ class ReviewController extends Controller
             'note'   => 'required_if:status,changes_requested|nullable|string|max:500',
         ]);
 
+        $changes = $data['status'] === 'changes_requested';
+
         $task->update([
             'review_status' => $data['status'],
-            'review_note'   => $data['status'] === 'changes_requested' ? $data['note'] : null,
+            'review_note'   => $changes ? $data['note'] : null,
             'reviewed_at'   => now(),
+            // Rejected work is no longer done: creator must fix it and tick it again
+            'completed_at'  => $changes ? null : $task->completed_at,
         ]);
+
+        $task->application->creator->notify(new TaskReviewed($task));
 
         return response()->json(['data' => [
             'id'          => $task->id,

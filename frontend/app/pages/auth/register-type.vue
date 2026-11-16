@@ -13,7 +13,7 @@ definePageMeta({
         <div class="rt-inner">
             <!-- Logo -->
             <div class="rt-header">
-                <NuxtLink to="/" class="rt-logo">AffiliateMY</NuxtLink>
+                <NuxtLink to="/" class="rt-logo" style="display:inline-flex;align-items:center;gap:.5rem"><img src="/logo.png" alt="" width="32" height="32" style="border-radius:8px" />AffiliateMY</NuxtLink>
                 <p class="rt-sub">Choose your path</p>
             </div>
 

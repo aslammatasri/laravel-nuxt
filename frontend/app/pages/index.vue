@@ -113,7 +113,7 @@ onBeforeUnmount(() => {
     <!-- Nav: bordered bar with inline ⌘K pill -->
     <header class="nav">
       <div class="nav__inner">
-        <NuxtLink to="/" class="wordmark">Affiliate<span>MY</span></NuxtLink>
+        <NuxtLink to="/" class="wordmark" style="display:inline-flex;align-items:center;gap:.5rem"><img src="/logo.png" alt="" width="32" height="32" style="border-radius:8px" />Affiliate<span>MY</span></NuxtLink>
 
         <!-- <button
           ref="pillButton"
@@ -275,7 +275,7 @@ onBeforeUnmount(() => {
     <footer class="foot wrap">
       <p class="foot__line">Made in Malaysia, for people who make things.</p>
       <div class="foot__meta">
-        <span class="wordmark">Affiliate<span>MY</span></span>
+        <span class="wordmark" style="display:inline-flex;align-items:center;gap:.5rem"><img src="/logo.png" alt="" width="32" height="32" style="border-radius:8px" />Affiliate<span>MY</span></span>
         <span>© 2026</span>
       </div>
     </footer>

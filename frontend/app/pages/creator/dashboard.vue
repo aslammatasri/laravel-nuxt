@@ -4,15 +4,6 @@ definePageMeta({
     layout: "creator",
 });
 
-interface Product {
-    id: number;
-    name: string;
-    flat_fee?: string | number | null;
-    free_sample?: boolean;
-    category: string;
-    price: number;
-}
-
 const { $api } = useApi();
 const authStore = useAuth();
 
@@ -45,11 +36,43 @@ const { data: stats } = await useAsyncData("creator-dashboard-stats", () =>
     $api<Stats>("/creator/dashboard/stats").catch(() => null),
 );
 
-const { data: marketplace } = await useAsyncData("creator-marketplace", () =>
-    $api<{ data: Product[] }>("/creator/marketplace", {
-        params: { per_page: 5 },
-    }).catch(() => null),
+interface CollabTask {
+    id: number;
+    title: string;
+    done: boolean;
+    review?: "pending" | "approved" | "changes_requested" | null;
+}
+interface Collab {
+    id: number;
+    state: "active" | "ending_soon" | "ended";
+    days_left: number | null;
+    fee?: { amount: number; status: "none" | "pending" | "due" | "paid"; approved: number; total: number };
+    tasks: CollabTask[];
+    product: { id: number; name: string; brand: { name: string | null } };
+}
+
+const { data: collabsRes } = await useAsyncData("creator-dashboard-collabs", () =>
+    $api<{ data: Collab[] }>("/creator/collaborations").catch(() => null),
 );
+
+const myCollabs = computed(() =>
+    (collabsRes.value?.data ?? [])
+        .filter((c) => c.state !== "ended")
+        .sort((a, b) => (a.days_left ?? 9999) - (b.days_left ?? 9999)),
+);
+
+const doneCount = (c: Collab) => c.tasks.filter((t) => t.done).length;
+const progressPct = (c: Collab) => (c.tasks.length ? Math.round((doneCount(c) / c.tasks.length) * 100) : 0);
+const changesCount = (c: Collab) => c.tasks.filter((t) => t.review === "changes_requested").length;
+const awaitingCount = (c: Collab) => c.tasks.filter((t) => t.done && t.review === "pending").length;
+const feeLabel = (c: Collab) => {
+    if (!c.fee || c.fee.status === "none") return null;
+    if (c.fee.status === "paid") return { text: "Paid", cls: "bg-green-50 text-green-700" };
+    if (c.fee.status === "due") return { text: "Payment due from brand", cls: "bg-blue-50 text-blue-700" };
+    return { text: `${c.fee.approved}/${c.fee.total} approved`, cls: "bg-gray-100 text-gray-600" };
+};
+const daysLabel = (c: Collab) =>
+    c.days_left === null ? "No end date" : c.days_left === 0 ? "Ends today" : `${c.days_left} day${c.days_left === 1 ? "" : "s"} left`;
 
 const appStats = computed(
     () =>
@@ -265,63 +288,64 @@ const compact = (n: number) =>
             <CreatorApplicationsPanel />
         </div>
 
-        <!-- Latest Campaigns in Marketplace -->
-        <div
-            class="bg-white rounded-2xl border border-gray-100 overflow-hidden"
-        >
-            <div
-                class="px-6 py-4 border-b border-gray-100 flex items-center justify-between"
-            >
-                <h2 class="font-semibold text-gray-900">Latest Campaigns</h2>
-                <NuxtLink
-                    to="/creator/marketplace"
-                    class="text-sm text-green-600 hover:underline"
-                >
-                    Browse all
+        <!-- My campaign progress -->
+        <div class="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div class="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+                <h2 class="font-semibold text-gray-900">My Campaigns</h2>
+                <NuxtLink to="/creator/collaborations" class="text-sm text-green-600 hover:underline">
+                    Open collabs
                 </NuxtLink>
             </div>
 
-            <!-- Empty state -->
-            <div
-                v-if="!marketplace?.data?.length"
-                class="px-6 py-12 text-center text-gray-400"
-            >
+            <div v-if="!myCollabs.length" class="px-6 py-12 text-center text-gray-400">
                 <div class="w-14 h-14 rounded-full bg-green-50 flex items-center justify-center mx-auto mb-4">
                     <AppIcon name="marketplace" class="text-green-500" />
                 </div>
-                <p class="font-medium">No campaigns available yet</p>
-                <p class="text-sm mt-1">
-                    Check back soon for new campaigns to join
-                </p>
+                <p class="font-medium">No active campaigns yet</p>
+                <NuxtLink to="/creator/marketplace" class="text-sm text-green-600 hover:underline mt-1 inline-block">
+                    Find a campaign to join
+                </NuxtLink>
             </div>
 
-            <!-- Products list -->
             <div v-else class="divide-y divide-gray-50">
-                <div
-                    v-for="product in marketplace?.data?.slice(0, 5)"
-                    :key="product.id"
-                    class="px-6 py-4 flex items-center justify-between"
+                <NuxtLink
+                    v-for="c in myCollabs"
+                    :key="c.id"
+                    to="/creator/collaborations"
+                    class="block px-6 py-4 hover:bg-gray-50 transition-colors"
                 >
-                    <div>
-                        <p class="text-sm font-medium text-gray-900">
-                            {{ product.name }}
-                        </p>
-                        <p class="text-xs text-gray-400 mt-0.5">
-                            {{ product.category }}<template v-if="product.price != null"> · RM {{ product.price }}</template>
-                        </p>
-                    </div>
-                    <div class="flex items-center gap-3">
-                        <span class="text-sm font-semibold text-green-600">
-                            {{ paymentLabel(product) }}
-                        </span>
-                        <NuxtLink
-                            :to="`/creator/marketplace/${product.id}`"
-                            class="text-xs bg-green-50 text-green-700 px-3 py-1.5 rounded-xl hover:bg-green-100 transition-colors"
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium text-gray-900 truncate">{{ c.product.name }}</p>
+                            <p class="text-xs text-gray-400 mt-0.5">{{ c.product.brand?.name }}</p>
+                        </div>
+                        <span
+                            class="text-xs shrink-0"
+                            :class="c.state === 'ending_soon' ? 'text-orange-600 font-medium' : 'text-gray-400'"
                         >
-                            View
-                        </NuxtLink>
+                            {{ daysLabel(c) }}
+                        </span>
                     </div>
-                </div>
+
+                    <div class="flex items-center gap-3 mt-3">
+                        <div class="flex-1 h-1.5 rounded-full bg-gray-100 overflow-hidden">
+                            <div class="h-full bg-green-500 rounded-full" :style="{ width: progressPct(c) + '%' }" />
+                        </div>
+                        <span class="text-xs text-gray-500 shrink-0">{{ doneCount(c) }}/{{ c.tasks.length }} done</span>
+                    </div>
+
+                    <div class="flex flex-wrap gap-2 mt-2.5">
+                        <span v-if="changesCount(c)" class="text-xs px-2 py-0.5 rounded-full bg-orange-50 text-orange-700 font-medium">
+                            {{ changesCount(c) }} need{{ changesCount(c) === 1 ? "s" : "" }} changes
+                        </span>
+                        <span v-if="awaitingCount(c)" class="text-xs px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-700">
+                            {{ awaitingCount(c) }} awaiting review
+                        </span>
+                        <span v-if="feeLabel(c)" class="text-xs px-2 py-0.5 rounded-full" :class="feeLabel(c)!.cls">
+                            {{ feeLabel(c)!.text }}
+                        </span>
+                    </div>
+                </NuxtLink>
             </div>
         </div>
     </div>
