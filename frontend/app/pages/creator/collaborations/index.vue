@@ -42,31 +42,33 @@ const { data } = await useAsyncData("creator-collaborations", () =>
     { deep: true },
 );
 
-const filter = ref<"all" | "active" | "ended">("all");
+const filter = ref<"all" | "active" | "completed" | "ended">("all");
 const expandedId = ref<number | null>(null);
+
+// All work delivered: every task done, and every reviewed deliverable approved by the brand
+const isDone = (c: Collab) =>
+    c.tasks.length > 0 && c.tasks.every((t) => t.done && (!t.review || t.review === "approved"));
+// Where a collaboration sits: finished work beats the calendar
+const bucket = (c: Collab) => (isDone(c) ? "completed" : c.state === "ended" ? "ended" : "active");
 
 const collabs = computed(() => data.value?.data ?? []);
 const counts = computed(() => ({
     all: collabs.value.length,
-    active: collabs.value.filter((c) => c.state !== "ended").length,
-    ending: collabs.value.filter((c) => c.state === "ending_soon").length,
-    ended: collabs.value.filter((c) => c.state === "ended").length,
+    active: collabs.value.filter((c) => bucket(c) === "active").length,
+    ending: collabs.value.filter((c) => bucket(c) === "active" && c.state === "ending_soon").length,
+    completed: collabs.value.filter((c) => bucket(c) === "completed").length,
+    ended: collabs.value.filter((c) => bucket(c) === "ended").length,
 }));
 
 const tabs = computed(() => [
     { key: "all", label: "All", count: counts.value.all },
     { key: "active", label: "Active", count: counts.value.active },
+    { key: "completed", label: "Completed", count: counts.value.completed },
     { key: "ended", label: "Ended", count: counts.value.ended },
 ] as const);
 
 const visible = computed(() =>
-    collabs.value.filter((c) =>
-        filter.value === "all"
-            ? true
-            : filter.value === "ended"
-              ? c.state === "ended"
-              : c.state !== "ended",
-    ),
+    collabs.value.filter((c) => filter.value === "all" || bucket(c) === filter.value),
 );
 
 // Index sorted by urgency: ending soon, then running, then finished
@@ -77,9 +79,10 @@ const groups = computed(() => {
         new Date(b.product.campaign_end ?? 0).getTime() - new Date(a.product.campaign_end ?? 0).getTime();
 
     return [
-        { key: "ending", title: "Ending soon", hint: "within 14 days", items: visible.value.filter((c) => c.state === "ending_soon").sort(byDays) },
-        { key: "running", title: "Running", hint: "", items: visible.value.filter((c) => c.state === "active").sort(byDays) },
-        { key: "finished", title: "Finished", hint: "", items: visible.value.filter((c) => c.state === "ended").sort(byEndDesc) },
+        { key: "ending", title: "Ending soon", hint: "within 14 days", items: visible.value.filter((c) => bucket(c) === "active" && c.state === "ending_soon").sort(byDays) },
+        { key: "running", title: "Running", hint: "", items: visible.value.filter((c) => bucket(c) === "active" && c.state === "active").sort(byDays) },
+        { key: "completed", title: "Completed", hint: "all deliverables done", items: visible.value.filter((c) => bucket(c) === "completed").sort(byEndDesc) },
+        { key: "finished", title: "Ended", hint: "campaign closed, work unfinished", items: visible.value.filter((c) => bucket(c) === "ended").sort(byEndDesc) },
     ].filter((g) => g.items.length);
 });
 
@@ -101,6 +104,7 @@ function money(n: number) {
     return "RM " + n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 function timeLabel(c: Collab) {
+    if (isDone(c)) return "Work complete";
     if (c.state === "ended") return `Ended ${formatDate(c.product.campaign_end)}`;
     if (c.days_left === null) return "No end date";
     if (c.days_left === 0) return "Ends today";
@@ -128,7 +132,8 @@ const hasDeliverables = (c: Collab) =>
             <p class="cl-lede">
                 <template v-if="counts.all">
                     {{ counts.active }} running<template v-if="counts.ending"> · {{ counts.ending }} ending soon</template>
-                    <template v-if="counts.ended"> · {{ counts.ended }} finished</template>.
+                    <template v-if="counts.completed"> · {{ counts.completed }} completed</template>
+                    <template v-if="counts.ended"> · {{ counts.ended }} ended</template>.
                     Campaigns you are approved to join, most urgent first.
                 </template>
                 <template v-else>Campaigns you are approved to join will appear here.</template>
@@ -168,7 +173,7 @@ const hasDeliverables = (c: Collab) =>
             </h2>
 
             <ul class="cl-list">
-                <li v-for="c in g.items" :key="c.id" class="cl-row" :class="{ 'is-ended': c.state === 'ended' }">
+                <li v-for="c in g.items" :key="c.id" class="cl-row" :class="{ 'is-ended': bucket(c) === 'ended' }">
                     <div class="cl-row__main">
                         <div class="cl-ident">
                             <div class="cl-thumb">
@@ -200,7 +205,7 @@ const hasDeliverables = (c: Collab) =>
                         <div class="cl-time" :class="{ 'is-soon': c.state === 'ending_soon' }">
                             <p class="cl-time__label">{{ timeLabel(c) }}</p>
                             <div
-                                v-if="c.state !== 'ended' && elapsedPct(c) !== null"
+                                v-if="c.state !== 'ended' && !isDone(c) && elapsedPct(c) !== null"
                                 class="cl-bar"
                                 role="img"
                                 :aria-label="`${elapsedPct(c)}% of the campaign period has passed`"

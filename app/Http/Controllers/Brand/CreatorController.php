@@ -14,7 +14,7 @@ class CreatorController extends Controller
     // Creators approved on this brand's campaigns, with checklist progress per campaign
     public function index(Request $request)
     {
-        $apps = ProductApplication::with(['creator:id,name,email,avatar', 'creator.creatorProfile', 'product:id,name,images,campaign_end,status,commission_rate,commission_type', 'tasks'])
+        $apps = ProductApplication::with(['creator:id,name,email,avatar', 'creator.creatorProfile', 'product:id,name,images,campaign_end,status,flat_fee,commission_rate,commission_type', 'tasks'])
             ->whereHas('product', fn ($q) => $q->where('brand_id', $request->user()->id))
             ->where('status', ApplicationStatus::APPROVED->value)
             ->latest('updated_at')

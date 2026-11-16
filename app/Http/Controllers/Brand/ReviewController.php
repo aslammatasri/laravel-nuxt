@@ -6,6 +6,7 @@ use App\Enums\ApplicationStatus;
 use App\Http\Controllers\Controller;
 use App\Models\CollaborationTask;
 use App\Models\ProductApplication;
+use App\Notifications\PayoutSent;
 use App\Notifications\TaskReviewed;
 use Illuminate\Http\Request;
 
@@ -57,6 +58,8 @@ class ReviewController extends Controller
         $data = $request->validate(['reference' => 'nullable|string|max:100']);
 
         $application->update(['paid_at' => now(), 'payment_ref' => $data['reference'] ?? null]);
+
+        $application->creator->notify(new PayoutSent($application));
 
         return response()->json(['data' => $application->fresh(['product', 'tasks'])->feeSummary()]);
     }
