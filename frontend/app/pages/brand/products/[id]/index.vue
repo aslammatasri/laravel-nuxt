@@ -17,8 +17,6 @@ interface Product {
     status: string;
     price: number | string;
     category: string;
-    commission_rate: string;
-    commission_type: string;
     campaign_start: string | null;
     campaign_end: string | null;
     max_affiliates: number | null;
@@ -333,11 +331,11 @@ async function confirmReject() {
 
                     <div class="bg-white rounded-2xl border border-gray-100 p-5 space-y-3 text-sm">
                         <h2 class="font-semibold text-gray-900">Details</h2>
-                        <div class="flex justify-between"><span class="text-gray-500">Price</span><span class="text-gray-900">RM {{ product.price }}</span></div>
+                        <div v-if="product.price != null" class="flex justify-between"><span class="text-gray-500">Price</span><span class="text-gray-900">RM {{ product.price }}</span></div>
                         <div class="flex justify-between">
-                            <span class="text-gray-500">Commission</span>
+                            <span class="text-gray-500">Payment</span>
                             <span class="font-medium text-green-600">
-                                {{ product.commission_rate }}{{ product.commission_type === "percentage" ? "%" : " RM" }}
+                                {{ paymentLabel(product) }} <span class="text-gray-400 font-normal">{{ paymentSub(product) }}</span>
                             </span>
                         </div>
                         <div class="flex justify-between"><span class="text-gray-500">Start</span><span class="text-gray-900">{{ formatDate(product.campaign_start) }}</span></div>

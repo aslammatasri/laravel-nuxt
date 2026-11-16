@@ -19,8 +19,7 @@ class CampaignFieldsTest extends TestCase
             'description'     => 'Lightweight sunscreen',
             'price'           => 49.9,
             'category'        => 'beauty',
-            'commission_rate' => 10,
-            'commission_type' => 'percentage',
+            'flat_fee'        => 200,
             'campaign_start'  => now()->addDay()->toDateString(),
             'campaign_end'    => now()->addDays(30)->toDateString(),
         ], $overrides);
@@ -59,6 +58,18 @@ class CampaignFieldsTest extends TestCase
         Sanctum::actingAs(User::factory()->create(['role' => 'brand']), ['*']);
 
         $this->postJson('/api/brand/products', $this->payload())->assertCreated();
+    }
+
+    public function test_campaign_needs_a_payment_or_a_free_sample(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'brand']), ['*']);
+
+        $this->postJson('/api/brand/products', $this->payload(['flat_fee' => null]))
+            ->assertStatus(422)
+            ->assertJsonPath('errors.flat_fee.0', 'Enter a payment, or offer a free sample.');
+
+        $this->postJson('/api/brand/products', $this->payload(['flat_fee' => 0, 'free_sample' => true]))
+            ->assertCreated();
     }
 
     public function test_invalid_values_get_clear_messages(): void

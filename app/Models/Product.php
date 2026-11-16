@@ -94,4 +94,12 @@ class Product extends Model
     {
         return $this->hasMany(ProductVariation::class);
     }
+
+    // Creator's commission for one order: percentage of order value, or a fixed sum per sale
+    public function commissionFor(float $orderAmount): float
+    {
+        $rate = (float) $this->commission_rate;
+
+        return round($this->commission_type === 'percentage' ? $orderAmount * $rate / 100 : $rate, 2);
+    }
 }

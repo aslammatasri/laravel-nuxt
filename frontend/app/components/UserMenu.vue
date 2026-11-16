@@ -31,7 +31,13 @@ onUnmounted(() => document.removeEventListener('click', handleClickOutside))
       class="rounded-full transition-opacity hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2"
       :aria-label="'Account menu for ' + authStore.user?.name"
     >
-      <Avatar :src="authStore.user?.avatar" :name="authStore.user?.name" size="sm" :tone="props.accent ?? 'blue'" />
+      <!-- The user is loaded in the browser only (auth.client.ts), so render the avatar there too -->
+      <ClientOnly>
+        <Avatar :src="authStore.user?.avatar" :name="authStore.user?.name" size="sm" :tone="props.accent ?? 'blue'" />
+        <template #fallback>
+          <span class="inline-block w-9 h-9 rounded-full" :class="accentClasses" aria-hidden="true" />
+        </template>
+      </ClientOnly>
     </button>
 
     <div

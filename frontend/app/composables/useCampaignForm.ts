@@ -99,7 +99,8 @@ export function validateExtras(f: CampaignExtras, campaignEnd: string): Record<s
   if (f.min_subscribers !== '' && (!Number.isInteger(Number(f.min_subscribers)) || Number(f.min_subscribers) < 0))
     e.min_subscribers = 'Use a whole number, or leave empty for no minimum.'
 
-  if (f.flat_fee !== '' && Number(f.flat_fee) < 0) e.flat_fee = 'Flat fee cannot be negative.'
+  if (f.flat_fee !== '' && Number(f.flat_fee) < 0) e.flat_fee = 'Payment cannot be negative.'
+  else if (!(Number(f.flat_fee) > 0) && !f.free_sample) e.flat_fee = 'Enter a payment, or offer a free sample.'
 
   if (f.application_deadline && campaignEnd && f.application_deadline > campaignEnd.slice(0, 10))
     e.application_deadline = 'Applications must close on or before the campaign end date.'

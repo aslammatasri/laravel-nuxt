@@ -25,10 +25,10 @@ class StoreProductRequest extends FormRequest
        return [
             'name'            => 'required|string|max:255',
             'description'     => 'required|string',
-            'price'           => 'required|numeric|min:0',
+            'price'           => 'nullable|numeric|min:0',
             'category'        => 'required|string',
-            'commission_rate' => 'required|numeric|min:0',
-            'commission_type' => 'required|in:fixed,percentage',
+            'commission_rate' => 'nullable|numeric|min:0',
+            'commission_type' => 'nullable|in:fixed,percentage',
             'campaign_start'  => 'required|date',
             'campaign_end'    => 'required|date|after:campaign_start',
             'max_affiliates'  => 'nullable|integer|min:1',
@@ -52,6 +52,19 @@ class StoreProductRequest extends FormRequest
     }
 
     /**
+     * A campaign must pay the creator something: a cash payment, a free sample, or both.
+     */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($v) {
+            $fee = (float) $this->input('flat_fee', 0);
+            if ($fee <= 0 && ! $this->boolean('free_sample')) {
+                $v->errors()->add('flat_fee', 'Enter a payment, or offer a free sample.');
+            }
+        });
+    }
+
+    /**
      * Friendly validation messages.
      *
      * @return array<string, string>
@@ -61,11 +74,9 @@ class StoreProductRequest extends FormRequest
         return [
             'name.required'            => 'Enter a product name.',
             'description.required'     => 'Add a short description.',
-            'price.required'           => 'Enter the product price.',
             'price.numeric'            => 'Price must be a number.',
             'price.min'                => 'Price cannot be negative.',
             'category.required'        => 'Choose a category.',
-            'commission_rate.required' => 'Enter the commission rate.',
             'commission_rate.numeric'  => 'Commission must be a number.',
             'campaign_start.required'  => 'Choose a campaign start date.',
             'campaign_start.date'      => 'Start date is not a valid date.',
@@ -81,7 +92,7 @@ class StoreProductRequest extends FormRequest
             'brief.max'                         => 'The brief is too long (max 3000 characters).',
             'product_url.url'                   => 'Enter a full link, for example https://shop.example.com/product.',
             'min_subscribers.integer'           => 'Minimum subscribers must be a whole number.',
-            'flat_fee.numeric'                  => 'Flat fee must be an amount.',
+            'flat_fee.numeric'                  => 'Payment must be an amount.',
             'application_deadline.date'         => 'Application deadline is not a valid date.',
             'application_deadline.before_or_equal' => 'Applications must close on or before the campaign end date.',
             'images.*.image'           => 'Only image files are allowed.',

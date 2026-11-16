@@ -79,6 +79,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('applications',                [BrandApplicationController::class, 'index']);
         Route::patch('applications/{id}/approve', [BrandApplicationController::class, 'approve']);
         Route::patch('applications/{id}/reject',  [BrandApplicationController::class, 'reject']);
+        Route::post('applications/{id}/sales',    [\App\Http\Controllers\Brand\SaleController::class, 'store']);
+        Route::patch('sales/{id}/paid',           [\App\Http\Controllers\Brand\SaleController::class, 'markPaid']);
+        Route::patch('sales/{id}/reverse',        [\App\Http\Controllers\Brand\SaleController::class, 'reverse']);
+        Route::patch('tasks/{id}/review',         [\App\Http\Controllers\Brand\ReviewController::class, 'review']);
+        Route::patch('applications/{id}/payout',  [\App\Http\Controllers\Brand\ReviewController::class, 'markPaid']);
         Route::get('creators',                    [BrandCreatorController::class, 'index']);
         Route::get('creators/{id}/portfolio',     [BrandCreatorController::class, 'portfolio']);
     });
@@ -102,6 +107,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('marketplace/{id}',        [CreatorProductController::class, 'show']);
         Route::post('products/{id}/apply',    [CreatorApplicationController::class, 'store']);
         Route::get('applications',            [CreatorApplicationController::class, 'index']);
+        Route::get('payout-details',          [\App\Http\Controllers\Creator\PayoutDetailsController::class, 'show']);
+        Route::put('payout-details',          [\App\Http\Controllers\Creator\PayoutDetailsController::class, 'update']);
+        Route::get('earnings',                [\App\Http\Controllers\Creator\EarningsController::class, 'index']);
         Route::get('collaborations',          [CollaborationController::class, 'index']);
         Route::post('collaborations/{id}/tasks',               [CollaborationController::class, 'storeTask']);
         Route::patch('collaborations/{id}/tasks/{taskId}',     [CollaborationController::class, 'updateTask']);

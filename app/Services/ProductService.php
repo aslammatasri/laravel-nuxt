@@ -23,7 +23,7 @@ class ProductService
             throw new \InvalidArgumentException('Invalid commission type');
         }
 
-        $allowedSorts = ['commission_rate', 'created_at', 'price', 'name'];
+        $allowedSorts = ['flat_fee', 'commission_rate', 'created_at', 'price', 'name'];
         if (!empty($filters['sort']) && !in_array($filters['sort'], $allowedSorts)) {
             throw new \InvalidArgumentException('Invalid sort field');
         }

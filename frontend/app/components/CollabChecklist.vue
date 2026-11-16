@@ -6,11 +6,14 @@ export interface CollabTask {
     due_date: string | null;
     link: string | null;
     done: boolean;
+    review?: "pending" | "approved" | "changes_requested" | null;
+    review_note?: string | null;
 }
 
 const props = defineProps<{ collabId: number; tasks: CollabTask[]; ended?: boolean }>();
 const emit = defineEmits<{ (e: "update:tasks", v: CollabTask[]): void }>();
 
+const nowMs = useState<number>("now-ms", () => Date.now()); // same value on server and client
 const { $api } = useApi();
 const base = computed(() => `/creator/collaborations/${props.collabId}/tasks`);
 
@@ -90,10 +93,10 @@ async function remove(t: CollabTask) {
 }
 
 function overdue(t: CollabTask) {
-    return !t.done && !props.ended && !!t.due_date && new Date(t.due_date + "T23:59:59") < new Date();
+    return !t.done && !props.ended && !!t.due_date && new Date(t.due_date + "T23:59:59").getTime() < nowMs.value;
 }
 function fmt(d: string) {
-    return new Date(d).toLocaleDateString("en-MY", { month: "short", day: "numeric" });
+    return new Date(d).toLocaleDateString("en-MY", { timeZone: "Asia/Kuala_Lumpur", month: "short", day: "numeric" });
 }
 </script>
 
@@ -114,6 +117,9 @@ function fmt(d: string) {
                     <span class="ck__text">{{ t.title }}</span>
                 </label>
                 <span class="ck__type">{{ TYPES.find((x) => x.value === t.type)?.label ?? t.type }}</span>
+                <span v-if="t.done && t.review" class="ck__rev" :class="`is-${t.review}`">
+                    {{ t.review === "approved" ? "Approved" : t.review === "changes_requested" ? "Changes requested" : "Awaiting review" }}
+                </span>
                 <span v-if="t.due_date" class="ck__due" :class="{ 'is-late': overdue(t) }">
                     {{ overdue(t) ? "Overdue · " : "Due " }}{{ fmt(t.due_date) }}
                 </span>
@@ -122,6 +128,10 @@ function fmt(d: string) {
                     {{ t.link ? "Edit link" : "Add link" }}
                 </button>
                 <button type="button" class="ck__act ck__act--del" :aria-label="`Delete ${t.title}`" @click="remove(t)">Delete</button>
+
+                <p v-if="t.review === 'changes_requested' && t.review_note" class="ck__note">
+                    Brand note: {{ t.review_note }}. Update your link or work, and it goes back for review.
+                </p>
 
                 <form v-if="linkOpen === t.id" class="ck__link" @submit.prevent="saveLink(t, ($event.target as HTMLFormElement).link.value.trim())">
                     <input name="link" type="url" :value="t.link ?? ''" placeholder="https://… link to your published content" aria-label="Content link" />
@@ -157,6 +167,10 @@ function fmt(d: string) {
 .ck__text { font-size: 0.9rem; overflow-wrap: anywhere; }
 .ck__item.is-done .ck__text { text-decoration: line-through; color: oklch(55.1% 0.027 264.4); }
 .ck__type { font-size: 0.75rem; padding: 0.1rem 0.55rem; border: 1px solid oklch(92.8% 0.006 264.5); border-radius: 999px; color: oklch(44.6% 0.03 256.8); }
+.ck__rev { font-size: 0.75rem; font-weight: 600; padding: 0.1rem 0.55rem; border-radius: 999px; background: oklch(98.5% 0.002 247.8); color: oklch(44.6% 0.03 256.8); }
+.ck__rev.is-approved { background: oklch(52.7% 0.154 150.07); color: #fff; }
+.ck__rev.is-changes_requested { background: oklch(98.7% 0.022 95.3); color: oklch(55.5% 0.163 48.4); }
+.ck__note { flex: 1 1 100%; margin: 0; padding: 0.5rem 0.75rem; border-radius: 10px; background: oklch(98.7% 0.022 95.3); font-size: 0.85rem; color: oklch(55.5% 0.163 48.4); }
 .ck__due { font-size: 0.8rem; color: oklch(55.1% 0.027 264.4); font-variant-numeric: tabular-nums; }
 .ck__due.is-late { color: oklch(55.5% 0.163 48.4); font-weight: 600; }
 .ck__act { padding: 0.25rem 0; border: 0; background: none; font-size: 0.8rem; font-weight: 600; color: oklch(44.6% 0.03 256.8); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }

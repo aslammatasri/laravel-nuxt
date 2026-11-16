@@ -8,6 +8,7 @@ interface Collab {
     state: "active" | "ending_soon" | "ended";
     days_left: number | null;
     tasks: CollabTask[];
+    fee?: { amount: number; status: 'none' | 'pending' | 'due' | 'paid'; approved: number; total: number; reference?: string | null };
     product: {
         id: number;
         name: string;
@@ -15,8 +16,6 @@ interface Collab {
         images: string[];
         category: string | null;
         price: string | number | null;
-        commission_rate: string;
-        commission_type: string | null;
         campaign_start: string | null;
         campaign_end: string | null;
         brand: { name: string | null; avatar?: string | null };
@@ -34,6 +33,7 @@ interface Collab {
 
 import type { CollabTask } from "~/components/CollabChecklist.vue";
 
+const nowMs = useState<number>("now-ms", () => Date.now()); // same value on server and client
 const config = useRuntimeConfig();
 const { $api } = useApi();
 
@@ -91,6 +91,7 @@ const taskSummary = (c: Collab) => `${c.tasks.filter((t) => t.done).length}/${c.
 function formatDate(d: string | null) {
     if (!d) return "-";
     return new Date(d).toLocaleDateString("en-MY", {
+        timeZone: "Asia/Kuala_Lumpur",
         year: "numeric",
         month: "short",
         day: "numeric",
@@ -98,10 +99,6 @@ function formatDate(d: string | null) {
 }
 function money(n: number) {
     return "RM " + n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-function commission(c: Collab) {
-    const rate = Number(c.product.commission_rate);
-    return c.product.commission_type === "percentage" ? `${rate}%` : money(rate);
 }
 function timeLabel(c: Collab) {
     if (c.state === "ended") return `Ended ${formatDate(c.product.campaign_end)}`;
@@ -117,7 +114,7 @@ function elapsedPct(c: Collab): number | null {
     const a = new Date(s).getTime();
     const b = new Date(e).getTime();
     if (b <= a) return null;
-    return Math.min(100, Math.max(0, Math.round(((Date.now() - a) / (b - a)) * 100)));
+    return Math.min(100, Math.max(0, Math.round(((nowMs.value - a) / (b - a)) * 100)));
 }
 const hasFee = (c: Collab) => Number(c.product.flat_fee) > 0;
 const hasDeliverables = (c: Collab) =>
@@ -196,10 +193,8 @@ const hasDeliverables = (c: Collab) =>
                         </div>
 
                         <div class="cl-terms">
-                            <p class="cl-terms__figure">{{ commission(c) }}</p>
-                            <p class="cl-terms__sub">
-                                commission<template v-if="hasFee(c)"> + {{ money(Number(c.product.flat_fee)) }}</template><template v-if="c.product.free_sample"> · free sample</template>
-                            </p>
+                            <p class="cl-terms__figure">{{ paymentLabel(c.product) }}</p>
+                            <p class="cl-terms__sub">{{ paymentSub(c.product) }}</p>
                         </div>
 
                         <div class="cl-time" :class="{ 'is-soon': c.state === 'ending_soon' }">
@@ -233,6 +228,15 @@ const hasDeliverables = (c: Collab) =>
 
                     <!-- Brief -->
                     <div v-if="expandedId === c.id" :id="`cl-brief-${c.id}`" class="cl-brief">
+                        <div v-if="c.fee && c.fee.status !== 'none'" class="cl-brief__check cl-track">
+                            <h4 class="cl-h">Your fee</h4>
+                            <p class="cl-text">
+                                <strong>{{ money(c.fee.amount) }}</strong> ·
+                                <template v-if="c.fee.status === 'paid'">Paid<template v-if="c.fee.reference"> (ref {{ c.fee.reference }})</template>.</template>
+                                <template v-else-if="c.fee.status === 'due'">All deliverables approved. The brand will pay you.</template>
+                                <template v-else>Paid after the brand approves your deliverables ({{ c.fee.approved }}/{{ c.fee.total }} approved).</template>
+                            </p>
+                        </div>
                         <div class="cl-brief__check">
                             <CollabChecklist :collab-id="c.id" :tasks="c.tasks" :ended="c.state === 'ended'" @update:tasks="setTasks(c, $event)" />
                         </div>

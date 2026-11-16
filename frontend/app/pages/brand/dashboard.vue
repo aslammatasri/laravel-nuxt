@@ -8,7 +8,7 @@ interface Product {
     id: number;
     name: string;
     status: string;
-    commission_rate: string;
+    flat_fee?: string | number | null;
 }
 interface Application {
     id: number;

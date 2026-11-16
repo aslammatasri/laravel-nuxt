@@ -35,6 +35,7 @@ class CollaborationController extends Controller
                     'approved_at'   => $a->updated_at,
                     'pitch_message' => $a->pitch_message,
                     'state'         => $state,
+                    'fee'           => $a->feeSummary(),
                     'tasks'         => $a->tasks->map(fn ($t) => $this->present($t))->values(),
                     'days_left'     => $daysLeft,
                     'product'       => [
@@ -101,6 +102,14 @@ class CollaborationController extends Controller
             unset($data['done']);
         }
 
+        // New or changed work goes back to the brand for review
+        $touched = array_key_exists('completed_at', $data) || array_key_exists('link', $data);
+        if ($touched && $task->review_status !== 'pending') {
+            $data['review_status'] = 'pending';
+            $data['review_note']   = null;
+            $data['reviewed_at']   = null;
+        }
+
         $task->update($data);
 
         return response()->json(['data' => $this->present($task->fresh())]);
@@ -141,6 +150,8 @@ class CollaborationController extends Controller
             'link'         => $t->link,
             'done'         => $t->completed_at !== null,
             'completed_at' => $t->completed_at,
+            'review'       => $t->needsReview() ? $t->review_status : null,
+            'review_note'  => $t->review_note,
         ];
     }
 

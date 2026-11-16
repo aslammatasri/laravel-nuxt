@@ -25,10 +25,10 @@ class UpdateProductRequest extends FormRequest
           return [
              'name'            => 'sometimes|string|max:255',
              'description'     => 'sometimes|string',
-             'price'           => 'sometimes|numeric|min:0',
+             'price'           => 'sometimes|nullable|numeric|min:0',
              'category'        => 'sometimes|string',
-             'commission_rate' => 'sometimes|numeric|min:0',
-             'commission_type' => 'sometimes|in:fixed,percentage',
+             'commission_rate' => 'sometimes|nullable|numeric|min:0',
+             'commission_type' => 'sometimes|nullable|in:fixed,percentage',
              'campaign_start'  => 'sometimes|date',
              'campaign_end'    => 'sometimes|date|after:campaign_start',
              'max_affiliates'  => 'nullable|integer|min:1',
@@ -55,6 +55,23 @@ class UpdateProductRequest extends FormRequest
     }
 
     /**
+     * A campaign must pay the creator something: a cash payment, a free sample, or both.
+     */
+    public function withValidator($validator): void
+    {
+        $validator->after(function ($v) {
+            // Only check when the payment fields are part of this edit
+            if (! $this->has('flat_fee') && ! $this->has('free_sample')) {
+                return;
+            }
+            $fee = (float) $this->input('flat_fee', 0);
+            if ($fee <= 0 && ! $this->boolean('free_sample')) {
+                $v->errors()->add('flat_fee', 'Enter a payment, or offer a free sample.');
+            }
+        });
+    }
+
+    /**
      * Friendly validation messages.
      *
      * @return array<string, string>
@@ -64,11 +81,9 @@ class UpdateProductRequest extends FormRequest
         return [
             'name.required'            => 'Enter a product name.',
             'description.required'     => 'Add a short description.',
-            'price.required'           => 'Enter the product price.',
             'price.numeric'            => 'Price must be a number.',
             'price.min'                => 'Price cannot be negative.',
             'category.required'        => 'Choose a category.',
-            'commission_rate.required' => 'Enter the commission rate.',
             'commission_rate.numeric'  => 'Commission must be a number.',
             'campaign_start.required'  => 'Choose a campaign start date.',
             'campaign_start.date'      => 'Start date is not a valid date.',

@@ -41,8 +41,6 @@ interface Product {
     description: string;
     price: number;
     category: string;
-    commission_rate: string;
-    commission_type: string;
     campaign_end: string;
     max_affiliates: number;
     spots_left: number;
@@ -95,22 +93,16 @@ const deadlineClosed = computed(() => {
 const money = (n: number) =>
     "RM " + n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const isPercent = computed(() => product.value?.commission_type === "percentage");
-const rateNumber = computed(() => Number(product.value?.commission_rate ?? 0));
+const hasFlatFee = computed(() => Number(product.value?.flat_fee ?? 0) > 0);
 const figure = computed(() =>
-    isPercent.value
-        ? { prefix: "", num: String(rateNumber.value), unit: "%" }
-        : { prefix: "RM", num: rateNumber.value.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 }), unit: "" },
+    hasFlatFee.value
+        ? { prefix: "RM", num: Number(product.value?.flat_fee).toLocaleString("en-MY", { maximumFractionDigits: 2 }), unit: "" }
+        : { prefix: "", num: "Free", unit: "" },
 );
 const offerHeadline = computed(() =>
-    isPercent.value ? "commission on every sale you drive." : "paid for every sale you drive.",
+    hasFlatFee.value ? "paid per creator for your content." : "product for your content, no cash payment.",
 );
-const earnExample = computed(() => {
-    const price = Number(product.value?.price ?? 0);
-    if (!isPercent.value || !price || !rateNumber.value) return "";
-    return `On a ${money(price)} sale you earn ${money((price * rateNumber.value) / 100)}.`;
-});
-const hasFlatFee = computed(() => Number(product.value?.flat_fee ?? 0) > 0);
+const earnExample = computed(() => (hasFlatFee.value ? "Paid in full once the brand approves your content." : ""));
 
 function daysUntil(d: string | null | undefined) {
     if (!d) return null;
@@ -129,9 +121,10 @@ const stats = computed(() => {
     const p = product.value;
     if (!p) return [];
     const list: { key: string; label: string; value: string; sub?: string; pct?: number | null }[] = [
-        { key: "price", label: "Product price", value: money(Number(p.price ?? 0)) },
         { key: "ends", label: "Campaign ends", value: formatDate(p.campaign_end), sub: countdown(p.campaign_end) },
     ];
+    if (p.price != null)
+        list.unshift({ key: "price", label: "Product price", value: money(Number(p.price)) });
     if (p.application_deadline)
         list.push({ key: "deadline", label: "Apply by", value: formatDate(p.application_deadline), sub: countdown(p.application_deadline) });
     if (p.posts_required)
@@ -143,13 +136,6 @@ const stats = computed(() => {
         pct: spotsTakenPct.value,
     });
     return list;
-});
-
-const commissionLabel = computed(() => {
-    if (!product.value) return "";
-    return `${product.value.commission_rate}${
-        product.value.commission_type === "percentage" ? "%" : " RM"
-    }`;
 });
 
 const imageCount = computed(() => product.value?.images?.length ?? 0);
@@ -216,7 +202,7 @@ async function handleApply() {
                     <h1 class="pd-title">{{ product.name }}</h1>
 
                     <div class="pd-offer">
-                        <p class="pd-figure" :aria-label="`${figure.prefix} ${figure.num}${figure.unit} commission`">
+                        <p class="pd-figure" :aria-label="`${figure.prefix} ${figure.num}${figure.unit} payment`">
                             <span v-if="figure.prefix" class="pd-figure__unit">{{ figure.prefix }}</span>
                             <span class="pd-figure__num">{{ figure.num }}</span>
                             <span v-if="figure.unit" class="pd-figure__unit">{{ figure.unit }}</span>
@@ -224,9 +210,8 @@ async function handleApply() {
                         <div class="pd-offer__words">
                             <p class="pd-offer__headline">{{ offerHeadline }}</p>
                             <p v-if="earnExample" class="pd-offer__sub">{{ earnExample }}</p>
-                            <ul v-if="hasFlatFee || product.free_sample" class="pd-chips" aria-label="Extra perks">
-                                <li v-if="hasFlatFee" class="pd-chip pd-chip--strong">+ {{ money(Number(product.flat_fee)) }} flat fee</li>
-                                <li v-if="product.free_sample" class="pd-chip pd-chip--strong">Free sample included</li>
+                            <ul v-if="product.free_sample" class="pd-chips" aria-label="Extra perks">
+                                <li class="pd-chip pd-chip--strong">Free sample included</li>
                             </ul>
                         </div>
                     </div>

@@ -8,10 +8,13 @@ interface Task {
     due_date: string | null;
     link: string | null;
     done: boolean;
+    review: "pending" | "approved" | "changes_requested" | null;
+    review_note: string | null;
 }
 interface Collab {
     id: number;
     ended: boolean;
+    fee: { amount: number; status: "none" | "pending" | "due" | "paid"; approved: number; total: number; reference: string | null };
     product: { id: number; name: string; images?: string[] | null };
     tasks: Task[];
 }
@@ -20,11 +23,13 @@ interface CreatorRow {
     name: string;
     email: string;
     avatar: string | null;
+    payout: { bank: string | null; account_name: string | null; account_number: string | null };
     collaborations: Collab[];
 }
 
+const nowMs = useState<number>("now-ms", () => Date.now()); // same value on server and client
 const { $api } = useApi();
-const { data, error } = await useAsyncData("brand-creators", () =>
+const { data, error, refresh } = await useAsyncData("brand-creators", () =>
     $api<{ data: CreatorRow[] }>("/brand/creators"),
 );
 
@@ -36,7 +41,7 @@ const open = ref<number | null>(null);
 const doneOf = (c: Collab) => c.tasks.filter((t) => t.done).length;
 const pctOf = (c: Collab) => (c.tasks.length ? Math.round((doneOf(c) / c.tasks.length) * 100) : 0);
 const isLate = (c: Collab, t: Task) =>
-    !t.done && !c.ended && !!t.due_date && new Date(t.due_date + "T23:59:59") < new Date();
+    !t.done && !c.ended && !!t.due_date && new Date(t.due_date + "T23:59:59").getTime() < nowMs.value;
 const linksOf = (c: Collab) => c.tasks.filter((t) => t.link).length;
 const lateOf = (c: Collab) => c.tasks.filter((t) => isLate(c, t)).length;
 
@@ -92,7 +97,40 @@ const tabs = computed(() => [
     { key: "done", label: "Complete", n: stats.value.done },
 ] as const);
 
-const fmt = (d: string) => new Date(d).toLocaleDateString("en-MY", { month: "short", day: "numeric" });
+// Review tasks and pay the flat fee
+const money = (n: number) => "RM " + n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const actionError = ref("");
+const noteFor = ref<number | null>(null); // task id with the "request changes" box open
+const note = ref("");
+const payRef = reactive<Record<number, string>>({});
+
+function apiMessage(e: unknown, fallback: string) {
+    const d = (e as { data?: { message?: string; errors?: Record<string, string[]> } })?.data;
+    return d?.errors ? Object.values(d.errors)[0]?.[0] ?? fallback : d?.message ?? fallback;
+}
+async function review(t: Task, status: "approved" | "changes_requested") {
+    actionError.value = "";
+    try {
+        await $api(`/brand/tasks/${t.id}/review`, { method: "PATCH", body: { status, note: status === "changes_requested" ? note.value : null } });
+        noteFor.value = null;
+        note.value = "";
+        await refresh();
+    } catch (e) {
+        actionError.value = apiMessage(e, "Could not save review.");
+    }
+}
+async function pay(c: Collab) {
+    actionError.value = "";
+    try {
+        await $api(`/brand/applications/${c.id}/payout`, { method: "PATCH", body: { reference: payRef[c.id] || null } });
+        await refresh();
+    } catch (e) {
+        actionError.value = apiMessage(e, "Could not mark as paid.");
+    }
+}
+const FEE_LABEL = { pending: "Fee awaiting approval", due: "Fee to pay", paid: "Fee paid", none: "" } as const;
+
+const fmt = (d: string) => new Date(d).toLocaleDateString("en-MY", { timeZone: "Asia/Kuala_Lumpur", month: "short", day: "numeric" });
 const toggle = (id: number) => (open.value = open.value === id ? null : id);
 </script>
 
@@ -193,8 +231,45 @@ const toggle = (id: number) => (open.value = open.value === id ? null : id);
                                         </span>
                                         <a v-if="t.link" :href="t.link" target="_blank" rel="noopener noreferrer" class="cr-ext">View content ↗</a>
                                         <span v-else-if="t.done && t.type !== 'sample'" class="cr-task__due">No link added</span>
+                                        <template v-if="t.done && t.review">
+                                            <span class="cr-pill" :class="`is-${t.review}`">
+                                                {{ t.review === "approved" ? "Approved" : t.review === "changes_requested" ? "Changes requested" : "Needs review" }}
+                                            </span>
+                                            <button v-if="t.review !== 'approved'" type="button" class="cr-act" @click="review(t, 'approved')">Approve</button>
+                                            <button v-if="t.review !== 'changes_requested'" type="button" class="cr-act cr-act--warn" @click="noteFor = noteFor === t.id ? null : t.id; note = ''">Request changes</button>
+                                        </template>
+                                        <form v-if="noteFor === t.id" class="cr-note" @submit.prevent="review(t, 'changes_requested')">
+                                            <input v-model="note" required maxlength="500" placeholder="What should the creator fix?" aria-label="Note to creator" />
+                                            <button type="submit" class="cr-btn cr-btn--solid" :disabled="!note.trim()">Send</button>
+                                        </form>
+                                        <p v-if="t.review === 'changes_requested' && t.review_note" class="cr-task__note">Your note: {{ t.review_note }}</p>
                                     </li>
                                 </ul>
+
+                                <section v-if="c.fee.status !== 'none'" class="cr-sales" aria-label="Flat fee">
+                                    <h4 class="cr-sales__h">Flat fee</h4>
+                                    <p class="cr-sales__sum">
+                                        <strong>{{ money(c.fee.amount) }}</strong> · {{ FEE_LABEL[c.fee.status] }}
+                                        <template v-if="c.fee.status === 'pending'">({{ c.fee.approved }}/{{ c.fee.total }} deliverables approved)</template>
+                                        <template v-if="c.fee.status === 'paid' && c.fee.reference"> · ref {{ c.fee.reference }}</template>
+                                    </p>
+
+                                    <dl v-if="c.fee.status === 'due' || c.fee.status === 'pending'" class="cr-bank">
+                                        <template v-if="cr.payout.account_number">
+                                            <div><dt>Bank</dt><dd>{{ cr.payout.bank }}</dd></div>
+                                            <div><dt>Account name</dt><dd>{{ cr.payout.account_name }}</dd></div>
+                                            <div><dt>Account number</dt><dd>{{ cr.payout.account_number }}</dd></div>
+                                        </template>
+                                        <p v-else class="cr-tasks__empty">The creator has not added bank details yet. Ask in Messages.</p>
+                                    </dl>
+
+                                    <form v-if="c.fee.status === 'due'" class="cr-sale-form" @submit.prevent="pay(c)">
+                                        <input v-model="payRef[c.id]" type="text" maxlength="100" placeholder="Transfer reference (optional)" aria-label="Transfer reference" />
+                                        <button type="submit" class="cr-btn cr-btn--solid">Mark as paid</button>
+                                    </form>
+                                    <p v-if="actionError" class="cr-sale-err" role="alert">{{ actionError }}</p>
+                                </section>
+                                <p v-else-if="actionError" class="cr-sale-err" role="alert">{{ actionError }}</p>
                             </div>
                         </li>
                     </ul>
@@ -511,6 +586,18 @@ const toggle = (id: number) => (open.value = open.value === id ? null : id);
 .cr-btn:hover {
     background: var(--cr-green-50);
 }
+.cr-btn--solid {
+    background: var(--cr-green-700);
+    color: var(--cr-paper);
+}
+.cr-btn--solid:hover {
+    background: var(--cr-green-700);
+    opacity: 0.9;
+}
+.cr-btn--solid:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
 .cr-btn:active {
     background: var(--cr-green-100);
 }
@@ -582,6 +669,128 @@ const toggle = (id: number) => (open.value = open.value === id ? null : id);
     color: var(--cr-green-700);
     text-decoration: underline;
     white-space: nowrap;
+}
+
+/* Sales */
+.cr-sales {
+    margin-top: 0.75rem;
+    padding-top: 0.9rem;
+    border-top: 1px solid var(--cr-rule);
+}
+.cr-sales__h {
+    margin: 0;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--cr-muted);
+}
+.cr-sales__h span {
+    font-weight: 500;
+}
+.cr-sales__sum {
+    margin: 0.3rem 0 0.7rem;
+    font-size: 0.875rem;
+    color: var(--cr-ink-2);
+    font-variant-numeric: tabular-nums;
+}
+.cr-sale-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.cr-sale-form input {
+    flex: 1 1 9rem;
+    min-width: 0;
+    min-height: 2.5rem;
+    padding: 0 0.9rem;
+    border: 1px solid var(--cr-rule);
+    border-radius: 999px;
+    background: var(--cr-paper);
+    font: inherit;
+    font-size: 0.875rem;
+    color: var(--cr-ink);
+}
+.cr-sale-form input:focus-visible,
+.cr-act:focus-visible {
+    outline: 2px solid var(--cr-green-700);
+    outline-offset: 2px;
+}
+.cr-sale-err {
+    margin: 0.5rem 0 0;
+    font-size: 0.85rem;
+    color: var(--cr-amber-700);
+}
+.cr-bank {
+    display: grid;
+    gap: 0.5rem 1.5rem;
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+    margin: 0 0 0.7rem;
+}
+.cr-bank dt {
+    font-size: 0.75rem;
+    color: var(--cr-muted);
+}
+.cr-bank dd {
+    margin: 0.1rem 0 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+.cr-note {
+    display: flex;
+    flex: 1 1 100%;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+.cr-note input {
+    flex: 1 1 14rem;
+    min-width: 0;
+    min-height: 2.5rem;
+    padding: 0 0.9rem;
+    border: 1px solid var(--cr-rule);
+    border-radius: 999px;
+    font: inherit;
+    font-size: 0.875rem;
+}
+.cr-task__note {
+    flex: 1 1 100%;
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--cr-amber-700);
+}
+.cr-pill {
+    padding: 0.1rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--cr-green-50);
+    color: var(--cr-green-700);
+}
+.cr-pill.is-paid {
+    background: var(--cr-green-700);
+    color: var(--cr-paper);
+}
+.cr-pill.is-pending {
+    background: var(--cr-paper);
+    color: var(--cr-ink-2);
+}
+.cr-pill.is-changes_requested {
+    background: var(--cr-amber-50);
+    color: var(--cr-amber-700);
+}
+.cr-act {
+    min-height: 2.25rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--cr-green-700);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+.cr-act--warn {
+    color: var(--cr-amber-700);
 }
 
 /* Empty */
