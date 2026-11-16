@@ -36,7 +36,7 @@ async function handleSubmit() {
     <div class="lg-inner">
 
       <div class="lg-header">
-        <NuxtLink to="/" class="lg-logo">AffiliateMY</NuxtLink>
+        <NuxtLink to="/" class="lg-logo" style="display:inline-flex;align-items:center;gap:.5rem"><img src="/logo.png" alt="" width="32" height="32" style="border-radius:8px" />AffiliateMY</NuxtLink>
         <h2 class="lg-title">Forgot password?</h2>
         <p class="lg-sub">Enter your email and we'll send you a reset link</p>
       </div>

@@ -41,7 +41,7 @@ const btnClass = computed(() =>
         <div class="rg-inner">
             <!-- Header -->
             <div class="rg-header">
-                <NuxtLink to="/" class="rg-logo">AffiliateMY</NuxtLink>
+                <NuxtLink to="/" class="rg-logo" style="display:inline-flex;align-items:center;gap:.5rem"><img src="/logo.png" alt="" width="32" height="32" style="border-radius:8px" />AffiliateMY</NuxtLink>
                 <div class="rg-role-badge">
                     <AppIcon :name="role === 'brand' ? 'creators' : 'video'" class="rg-role-icon" />
                     {{ role === "brand" ? "Brand Account" : "Creator Account" }}

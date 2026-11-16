@@ -117,7 +117,7 @@ function fmt(d: string) {
                     <span class="ck__text">{{ t.title }}</span>
                 </label>
                 <span class="ck__type">{{ TYPES.find((x) => x.value === t.type)?.label ?? t.type }}</span>
-                <span v-if="t.done && t.review" class="ck__rev" :class="`is-${t.review}`">
+                <span v-if="(t.done || t.review === 'changes_requested') && t.review"class="ck__rev" :class="`is-${t.review}`">
                     {{ t.review === "approved" ? "Approved" : t.review === "changes_requested" ? "Changes requested" : "Awaiting review" }}
                 </span>
                 <span v-if="t.due_date" class="ck__due" :class="{ 'is-late': overdue(t) }">

@@ -32,13 +32,14 @@ onUnmounted(() => unread.stopPolling())
             <!-- Logo -->
             <div
                 class="py-5 border-b border-gray-100 flex items-center whitespace-nowrap"
-                :class="collapsed ? 'justify-center px-2' : 'px-6'"
+                :class="collapsed ? 'justify-center px-2' : 'px-4'"
             >
-                <span v-if="collapsed" class="text-xl font-bold text-gray-900">A</span>
+                <img v-if="collapsed" src="/logo.png" alt="AffiliateMY" class="h-8 w-8 rounded-lg shrink-0" />
                 <template v-else>
-                    <span class="text-xl font-bold text-gray-900">AffiliateMY</span>
+                    <img src="/logo.png" alt="AffiliateMY" class="h-7 w-7 rounded-lg mr-2 shrink-0" />
+                    <span class="text-lg font-bold tracking-tight text-gray-900">AffiliateMY</span>
                     <span
-                        class="ml-2 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium"
+                        class="ml-1.5 text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium"
                         >Creator</span
                     >
                 </template>

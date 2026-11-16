@@ -51,6 +51,10 @@ class ReviewAndPayoutTest extends TestCase
         $this->patchJson("/api/brand/tasks/{$video->id}/review", ['status' => 'changes_requested'])->assertStatus(422);
         $this->patchJson("/api/brand/tasks/{$video->id}/review", ['status' => 'changes_requested', 'note' => 'Show the logo'])->assertOk();
 
+        // Rejected task is unchecked and the creator is notified
+        $this->assertNull($video->fresh()->completed_at);
+        $this->assertSame('Changes requested', $creator->notifications()->first()->data['title']);
+
         Sanctum::actingAs($creator, ['*']);
         $this->patchJson("/api/creator/collaborations/{$app->id}/tasks/{$video->id}", ['link' => 'https://youtu.be/x'])
             ->assertOk()->assertJsonPath('data.review', 'pending');
