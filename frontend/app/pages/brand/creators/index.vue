@@ -205,7 +205,11 @@ const toggle = (id: number) => (open.value = open.value === id ? null : id);
                                 >
                                     <span class="cr-chev" :class="{ 'is-open': open === c.id }" aria-hidden="true">›</span>
                                     <span class="cr-campaign">{{ c.product.name }}</span>
-                                    <span class="cr-status" :class="`is-${statusOf(c)}`">{{ STATUS_LABEL[statusOf(c)] }}<template v-if="statusOf(c) === 'late'"> · {{ lateOf(c) }}</template></span>
+                                    <span class="cr-badges">
+                                        <span class="cr-status" :class="`is-${statusOf(c)}`">{{ STATUS_LABEL[statusOf(c)] }}<template v-if="statusOf(c) === 'late'"> · {{ lateOf(c) }}</template></span>
+                                        <span v-if="c.fee.status === 'due'" class="cr-feebadge">Fee due · {{ money(c.fee.amount) }}</span>
+                                        <span v-else-if="c.fee.status === 'paid'" class="cr-feebadge is-paid">✓ Paid</span>
+                                    </span>
                                     <span v-if="linksOf(c)" class="cr-links">{{ linksOf(c) }} link{{ linksOf(c) === 1 ? "" : "s" }} ↗</span>
                                     <span class="cr-progress">
                                         <span class="cr-progress__n">{{ c.tasks.length ? `${doneOf(c)}/${c.tasks.length}` : "–" }}</span>
@@ -516,6 +520,27 @@ const toggle = (id: number) => (open.value = open.value === id ? null : id);
     background: var(--cr-paper-2);
     color: var(--cr-ink-2);
     white-space: nowrap;
+}
+.cr-badges {
+    grid-area: status;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem;
+    justify-self: start;
+}
+.cr-feebadge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    background: #fef3c7;
+    color: #92400e;
+    white-space: nowrap;
+}
+.cr-feebadge.is-paid {
+    background: #dcfce7;
+    color: #166534;
 }
 .cr-status.is-progress {
     background: var(--cr-green-50);

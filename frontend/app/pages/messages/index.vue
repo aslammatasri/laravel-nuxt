@@ -45,6 +45,21 @@ const selected = computed(() =>
     conversations.value.find((c) => c.id === selectedId.value) ?? null,
 );
 
+// Group by campaign, newest activity first. Creators have one brand per campaign, so their groups hold one row.
+const groups = computed(() => {
+    const at = (c: Conversation) => (c.last_message_at ? new Date(c.last_message_at).getTime() : 0);
+    const map = new Map<number, { product: Conversation["product"]; items: Conversation[]; latest: number }>();
+    for (const c of conversations.value) {
+        const g = map.get(c.product.id) ?? { product: c.product, items: [], latest: 0 };
+        g.items.push(c);
+        g.latest = Math.max(g.latest, at(c));
+        map.set(c.product.id, g);
+    }
+    return [...map.values()]
+        .map((g) => ({ ...g, items: g.items.sort((a, b) => at(b) - at(a)) }))
+        .sort((a, b) => b.latest - a.latest);
+});
+
 async function loadConversations() {
     try {
         const res = await $api<{ data: Conversation[] }>("/conversations");
@@ -249,40 +264,73 @@ onBeforeUnmount(() => {
                     </p>
                 </div>
 
-                <ul v-else class="overflow-y-auto divide-y divide-gray-50">
-                    <li v-for="c in conversations" :key="c.id">
-                        <button
-                            @click="openConversation(c.id)"
-                            class="w-full text-left px-4 py-3 flex gap-3 hover:bg-gray-50 transition-colors"
-                            :class="c.id === selectedId ? accent.active : ''"
-                        >
-                            <Avatar :src="c.other.avatar" :name="c.other.name" size="md" />
-                            <div class="min-w-0 flex-1">
-                                <div class="flex items-baseline justify-between gap-2">
-                                    <p class="text-sm truncate" :class="c.unread_count ? 'font-semibold text-gray-900' : 'font-medium text-gray-800'">
-                                        {{ c.other.name }}
-                                    </p>
-                                    <span class="text-[11px] text-gray-400 shrink-0">{{ relative(c.last_message_at) }}</span>
+                <ul v-else class="overflow-y-auto">
+                    <template v-for="g in groups" :key="g.product.id">
+                        <!-- Brand view: one header per campaign, creators underneath -->
+                        <li v-if="authStore.isBrand" class="sticky top-0 z-10 flex items-center gap-2.5 px-4 py-2 bg-gray-50 border-y border-gray-100">
+                            <img
+                                v-if="g.product.image"
+                                :src="`${config.public.storageBase}/${g.product.image}`"
+                                :alt="g.product.name"
+                                class="w-6 h-6 rounded-md object-cover bg-gray-100"
+                                loading="lazy"
+                            />
+                            <AppIcon v-else name="marketplace" class="text-gray-400" />
+                            <p class="text-xs font-semibold text-gray-700 truncate flex-1">{{ g.product.name }}</p>
+                            <span class="text-[11px] text-gray-400 shrink-0">{{ g.items.length }} {{ g.items.length === 1 ? "creator" : "creators" }}</span>
+                        </li>
+                        <li v-for="c in g.items" :key="c.id" class="border-b border-gray-50">
+                            <button
+                                @click="openConversation(c.id)"
+                                class="w-full text-left px-4 py-3 flex gap-3 hover:bg-gray-50 transition-colors"
+                                :class="c.id === selectedId ? accent.active : ''"
+                            >
+                                <Avatar v-if="authStore.isBrand" :src="c.other.avatar" :name="c.other.name" size="md" />
+                                <div v-else class="relative shrink-0 w-11 h-11">
+                                    <img
+                                        v-if="c.product.image"
+                                        :src="`${config.public.storageBase}/${c.product.image}`"
+                                        :alt="c.product.name"
+                                        class="w-11 h-11 rounded-xl object-cover bg-gray-100"
+                                        loading="lazy"
+                                    />
+                                    <div v-else class="w-11 h-11 rounded-xl bg-gray-100 flex items-center justify-center">
+                                        <AppIcon name="marketplace" class="text-gray-400" />
+                                    </div>
+                                    <Avatar
+                                        :src="c.other.avatar"
+                                        :name="c.other.name"
+                                        size="xxs"
+                                        class="absolute -bottom-1 -right-1 ring-2 ring-white rounded-full"
+                                    />
                                 </div>
-                                <p class="text-xs text-gray-400 truncate">{{ c.product.name }}</p>
-                                <div class="flex items-center justify-between gap-2 mt-0.5">
-                                    <p class="text-xs truncate" :class="c.unread_count ? 'text-gray-800' : 'text-gray-500'">
-                                        <template v-if="c.last_message">
-                                            {{ c.last_message.mine ? "You: " : "" }}{{ c.last_message.body }}
-                                        </template>
-                                        <template v-else>No messages yet</template>
-                                    </p>
-                                    <span
-                                        v-if="c.unread_count"
-                                        class="min-w-[18px] h-[18px] px-1 rounded-full text-white text-[10px] font-bold flex items-center justify-center shrink-0"
-                                        :class="accent.dot"
-                                    >
-                                        {{ c.unread_count > 9 ? "9+" : c.unread_count }}
-                                    </span>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-baseline justify-between gap-2">
+                                        <p class="text-sm truncate" :class="c.unread_count ? 'font-semibold text-gray-900' : 'font-medium text-gray-800'">
+                                            {{ c.other.name }}
+                                        </p>
+                                        <span class="text-[11px] text-gray-400 shrink-0">{{ relative(c.last_message_at) }}</span>
+                                    </div>
+                                    <p v-if="!authStore.isBrand" class="text-xs text-gray-400 truncate">{{ c.product.name }}</p>
+                                    <div class="flex items-center justify-between gap-2 mt-0.5">
+                                        <p class="text-xs truncate" :class="c.unread_count ? 'text-gray-800' : 'text-gray-500'">
+                                            <template v-if="c.last_message">
+                                                {{ c.last_message.mine ? "You: " : "" }}{{ c.last_message.body }}
+                                            </template>
+                                            <template v-else>No messages yet</template>
+                                        </p>
+                                        <span
+                                            v-if="c.unread_count"
+                                            class="min-w-[18px] h-[18px] px-1 rounded-full text-white text-[10px] font-bold flex items-center justify-center shrink-0"
+                                            :class="accent.dot"
+                                        >
+                                            {{ c.unread_count > 9 ? "9+" : c.unread_count }}
+                                        </span>
+                                    </div>
                                 </div>
-                            </div>
-                        </button>
-                    </li>
+                            </button>
+                        </li>
+                    </template>
                 </ul>
             </aside>
 

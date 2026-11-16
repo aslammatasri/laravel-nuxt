@@ -43,6 +43,24 @@ class ReviewAndPayoutTest extends TestCase
         $this->patchJson("/api/brand/applications/{$app->id}/payout")->assertStatus(422);
     }
 
+    public function test_marking_paid_notifies_creator_and_brand_list_shows_fee(): void
+    {
+        [$brand, $creator, $app, $video] = $this->collab(3500);
+        Sanctum::actingAs($brand, ['*']);
+
+        $this->patchJson("/api/brand/tasks/{$video->id}/review", ['status' => 'approved'])->assertOk();
+        $this->getJson('/api/brand/creators')
+            ->assertJsonPath('data.0.collaborations.0.fee.amount', 3500)
+            ->assertJsonPath('data.0.collaborations.0.fee.status', 'due');
+
+        $this->patchJson("/api/brand/applications/{$app->id}/payout", ['reference' => 'TXN-9'])->assertOk();
+
+        $n = $creator->notifications()->where('type', \App\Notifications\PayoutSent::class)->first();
+        $this->assertNotNull($n);
+        $this->assertSame('/creator/earnings', $n->data['url']);
+        $this->assertStringContainsString('TXN-9', $n->data['message']);
+    }
+
     public function test_changes_requested_needs_a_note_and_creator_edit_resets_review(): void
     {
         [$brand, $creator, $app, $video] = $this->collab();
