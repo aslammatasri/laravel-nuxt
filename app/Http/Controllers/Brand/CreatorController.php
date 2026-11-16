@@ -14,7 +14,7 @@ class CreatorController extends Controller
     // Creators approved on this brand's campaigns, with checklist progress per campaign
     public function index(Request $request)
     {
-        $apps = ProductApplication::with(['creator:id,name,email,avatar', 'product:id,name,images,campaign_end,status', 'tasks'])
+        $apps = ProductApplication::with(['creator:id,name,email,avatar', 'creator.creatorProfile', 'product:id,name,images,campaign_end,status,commission_rate,commission_type', 'tasks'])
             ->whereHas('product', fn ($q) => $q->where('brand_id', $request->user()->id))
             ->where('status', ApplicationStatus::APPROVED->value)
             ->latest('updated_at')
@@ -28,6 +28,11 @@ class CreatorController extends Controller
                 'name'   => $creator->name,
                 'email'  => $creator->email,
                 'avatar' => $creator->avatar,
+                'payout' => [
+                    'bank'           => $creator->creatorProfile?->payout_bank,
+                    'account_name'   => $creator->creatorProfile?->payout_account_name,
+                    'account_number' => $creator->creatorProfile?->payout_account_number,
+                ],
                 'collaborations' => $group->map(function ($a) {
                     $end = $a->product->campaign_end;
                     $ended = $a->product->status === 'closed' || ($end && $end->isPast() && ! $end->isToday());
@@ -36,6 +41,7 @@ class CreatorController extends Controller
                         'id'       => $a->id,
                         'product'  => ['id' => $a->product->id, 'name' => $a->product->name, 'images' => $a->product->images],
                         'ended'    => $ended,
+                        'fee'      => $a->feeSummary(),
                         'tasks'    => $a->tasks->map(fn ($t) => [
                             'id'       => $t->id,
                             'title'    => $t->title,
@@ -43,6 +49,8 @@ class CreatorController extends Controller
                             'due_date' => $t->due_date?->toDateString(),
                             'link'     => $t->link,
                             'done'     => $t->completed_at !== null,
+                            'review'      => $t->needsReview() ? $t->review_status : null,
+                            'review_note' => $t->review_note,
                         ])->values(),
                     ];
                 })->values(),

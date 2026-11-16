@@ -49,6 +49,14 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
             $query->where('commission_rate', '<=', $filters['max_commission']);
         }
 
+        if (!empty($filters['min_fee'])) {
+            $query->where('flat_fee', '>=', $filters['min_fee']);
+        }
+
+        if (!empty($filters['max_fee'])) {
+            $query->where('flat_fee', '<=', $filters['max_fee']);
+        }
+
         if (!empty($filters['min_price'])) {
             $query->where('price', '>=', $filters['min_price']);
         }
@@ -57,11 +65,12 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
             $query->where('price', '<=', $filters['max_price']);
         }
 
-        $sortField = match ($filters['sort'] ?? 'commission_rate') {
+        $sortField = match ($filters['sort'] ?? 'flat_fee') {
             'created_at'     => 'created_at',
             'price'          => 'price',
             'name'           => 'name',
-            default          => 'commission_rate',
+            'commission_rate' => 'commission_rate',
+            default          => 'flat_fee',
         };
         $sortDir = ($filters['sort'] ?? '') === 'name' ? 'asc' : 'desc';
 

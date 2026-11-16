@@ -7,8 +7,15 @@ defineProps<{ form: CampaignExtras; errors: Record<string, string> }>()
 <template>
   <div class="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
     <div>
-      <h2 class="font-semibold text-gray-900">Perks</h2>
-      <p class="text-sm text-gray-400 mt-0.5">What creators get besides commission.</p>
+      <h2 class="font-semibold text-gray-900">Payment</h2>
+      <p class="text-sm text-gray-400 mt-0.5">What each creator gets for completing the deliverables.</p>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium text-gray-700 mb-1">Payment per creator</label>
+      <CurrencyInput v-model="form.flat_fee" :invalid="!!errors.flat_fee" />
+      <p v-if="errors.flat_fee" class="text-xs text-red-500 mt-1" data-error>{{ errors.flat_fee }}</p>
+      <p v-else class="text-xs text-gray-400 mt-1">Paid in full once you approve their content. Leave empty for a product-only campaign.</p>
     </div>
 
     <div class="flex items-center justify-between gap-4">
@@ -30,15 +37,6 @@ defineProps<{ form: CampaignExtras; errors: Record<string, string> }>()
           :class="form.free_sample ? 'translate-x-5' : 'translate-x-0.5'"
         />
       </button>
-    </div>
-
-    <div>
-      <label class="block text-sm font-medium text-gray-700 mb-1">
-        Flat fee per creator <span class="text-gray-400 font-normal">(optional)</span>
-      </label>
-      <CurrencyInput v-model="form.flat_fee" :invalid="!!errors.flat_fee" />
-      <p v-if="errors.flat_fee" class="text-xs text-red-500 mt-1">{{ errors.flat_fee }}</p>
-      <p v-else class="text-xs text-gray-400 mt-1">Paid once, on top of commission.</p>
     </div>
   </div>
 </template>

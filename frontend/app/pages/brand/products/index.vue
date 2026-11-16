@@ -10,8 +10,8 @@ interface Product {
     image: string | null;
     images: string[];
     status: string;
-    commission_rate: string;
-    commission_type: string;
+    flat_fee?: string | number | null;
+    free_sample?: boolean;
     category: string;
     description: string;
     price: number;
@@ -154,15 +154,10 @@ async function deleteProduct(id: number) {
                     <div
                         class="flex items-center justify-between text-xs text-gray-500 mb-4"
                     >
-                        <span>RM {{ product.price }}</span>
+                        <span>{{ product.price != null ? `RM ${product.price}` : "No price" }}</span>
                         <span class="font-medium text-green-600">
-                            {{ product.commission_rate
-                            }}{{
-                                product.commission_type === "percentage"
-                                    ? "%"
-                                    : " RM"
-                            }}
-                            commission
+                            {{ paymentLabel(product) }}
+                            {{ paymentSub(product) }}
                         </span>
                     </div>
 

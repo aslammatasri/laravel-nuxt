@@ -7,10 +7,10 @@ const accentWord = 'revenue'
 const niches = ['Beauty', 'Food', 'Fitness', 'Tech', 'Travel', 'Gaming', 'Lifestyle', 'Parenting', 'Fashion', 'Education']
 
 const features = [
-  { title: 'High commission rates', desc: 'Find campaigns offering up to 30% commission across every category.' },
+  { title: 'Paid campaigns', desc: 'See the payment for every campaign up front, before you apply.' },
   { title: 'Verified Malaysian brands', desc: 'Every brand is SSM-verified. No scams, just real opportunities.' },
   { title: 'Real channel stats', desc: 'Connect your channel so brands see your real reach.' },
-  { title: 'Track your earnings', desc: 'See your commissions and monthly growth in one dashboard.' },
+  { title: 'Track your earnings', desc: 'See what each campaign pays and when it is paid, in one place.' },
   { title: 'Direct brand connection', desc: 'Message brands directly and build lasting partnerships.' },
   { title: 'Apply in minutes', desc: 'Write your pitch and submit an application in under 5 minutes.' },
   { title: 'Affiliate concierge', desc: 'Our team helps you get matched with the right brands, faster.' },
@@ -20,11 +20,11 @@ const steps = [
   { num: '01', title: 'Create your profile', desc: 'Creators add their channel. Brands add their company.' },
   { num: '02', title: 'Browse and apply', desc: 'Creators pick campaigns and send a short pitch.' },
   { num: '03', title: 'Review applications', desc: 'Brands compare creators by real channel stats.' },
-  { num: '04', title: 'Promote and earn', desc: 'Share your link. Commissions land in your dashboard.' },
+  { num: '04', title: 'Deliver and get paid', desc: 'Post your content, get it approved, and receive the campaign payment.' },
 ]
 
-const creatorChecklist = ['Join as a creator for free', 'Showcase your real channel stats', 'Apply to commission campaigns']
-const brandChecklist = ['Launch a campaign in minutes', 'Connect directly with creators', 'Only pay for real results']
+const creatorChecklist = ['Join as a creator for free', 'Showcase your real channel stats', 'Apply to paid campaigns']
+const brandChecklist = ['Launch a campaign in minutes', 'Connect directly with creators', 'Pay once the content is approved']
 
 const dashboardTo = computed(() => roleHome(authStore.user?.role))
 
@@ -213,13 +213,13 @@ onBeforeUnmount(() => {
       <section class="doors wrap">
         <p class="doors__lede">
           AffiliateMY connects Malaysian content creators with local brands.
-          Show your real channel stats, apply to high-commission campaigns, and start earning.
+          Show your real channel stats, apply to paid campaigns, and start earning.
         </p>
 
         <div class="doors__grid">
           <article id="creators" class="door door--creator">
             <h2>For creators</h2>
-            <p class="door__desc">Browse high-commission campaigns, connect your channel and start earning.</p>
+            <p class="door__desc">Browse paid campaigns, connect your channel and start earning.</p>
             <ul class="checks">
               <li v-for="item in creatorChecklist" :key="item"><AppIcon name="check" class="checks__icon" />{{ item }}</li>
             </ul>
@@ -251,7 +251,7 @@ onBeforeUnmount(() => {
       <!-- Process: the one dark band -->
       <section id="process" class="band">
         <div class="wrap band__inner">
-          <h2>From sign up to first commission</h2>
+          <h2>From sign up to first payment</h2>
           <ol class="steps">
             <li v-for="(s, i) in steps" :key="s.num" class="step" :class="i % 2 ? 'step--b' : 'step--a'">
               <span class="step__num">{{ s.num }}</span>

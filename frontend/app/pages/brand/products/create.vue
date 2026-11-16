@@ -41,23 +41,12 @@ const form = reactive({
     description: "",
     price: "",
     category: "",
-    commission_rate: "",
-    commission_type: "percentage",
     campaign_start: "",
     campaign_end: "",
     max_affiliates: "",
     ...emptyExtras(),
 });
-const commissionHint = computed(() => {
-    const rate = Number(form.commission_rate);
-    if (!form.commission_rate || isNaN(rate) || rate <= 0) return "";
-    const money = (n: number) =>
-        "RM " + n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    if (form.commission_type === "fixed") return `${money(rate)} per sale`;
-    const price = Number(form.price);
-    if (!price) return `${rate}% of each sale`;
-    return `${rate}% of ${money(price)} = ${money((price * rate) / 100)} per sale`;
-});
+
 
 
 interface VariationOption {
@@ -133,15 +122,9 @@ function validate(): boolean {
     if (!form.name.trim()) fieldErrors.name = "Enter a product name.";
     if (!form.description.trim()) fieldErrors.description = "Add a short description.";
 
-    if (form.price === "") fieldErrors.price = "Enter the product price.";
-    else if (Number(form.price) < 0) fieldErrors.price = "Price cannot be negative.";
+    if (form.price !== "" && Number(form.price) < 0) fieldErrors.price = "Price cannot be negative.";
 
     if (!form.category) fieldErrors.category = "Choose a category.";
-
-    if (form.commission_rate === "") fieldErrors.commission_rate = "Enter the commission rate.";
-    else if (Number(form.commission_rate) < 0) fieldErrors.commission_rate = "Commission cannot be negative.";
-    else if (form.commission_type === "percentage" && Number(form.commission_rate) > 100)
-        fieldErrors.commission_rate = "A percentage commission cannot be more than 100.";
 
     if (!form.campaign_start) fieldErrors.campaign_start = "Choose a valid start date (dd/mm/yyyy).";
     if (!form.campaign_end) fieldErrors.campaign_end = "Choose a valid end date (dd/mm/yyyy).";
@@ -399,7 +382,7 @@ async function handleSubmit() {
                         <div>
                             <label
                                 class="block text-sm font-medium text-gray-700 mb-1"
-                                >Price (RM)</label
+                                >Price (RM) <span class="text-gray-400 font-normal">(optional)</span></label
                             >
                             <CurrencyInput
                                 v-model="form.price"
@@ -584,45 +567,8 @@ async function handleSubmit() {
                 </div>
             </div>
 
-            <!-- Right column — commission & settings -->
+            <!-- Right column — settings -->
             <div class="space-y-5">
-                <div
-                    class="bg-white rounded-2xl border border-gray-100 p-6 space-y-5"
-                >
-                    <h2 class="font-semibold text-gray-900">Commission</h2>
-
-                    <div>
-                        <label
-                            class="block text-sm font-medium text-gray-700 mb-1"
-                            >Rate</label
-                        >
-                        <input
-                            v-model="form.commission_rate"
-                            type="number"
-                            min="0"
-                            placeholder="10"
-                            :aria-invalid="fieldErrors.commission_rate ? 'true' : undefined"
-                            class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            :class="{ 'border-red-300! focus:ring-red-400!': fieldErrors.commission_rate }"
-                        />
-                        <p v-if="fieldErrors.commission_rate" class="text-xs text-red-500 mt-1">{{ fieldErrors.commission_rate }}</p>
-                        <p v-if="commissionHint" class="text-xs text-gray-500 mt-1.5">{{ commissionHint }}</p>
-                    </div>
-                    <div>
-                        <label
-                            class="block text-sm font-medium text-gray-700 mb-1"
-                            >Type</label
-                        >
-                        <select
-                            v-model="form.commission_type"
-                            class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="percentage">Percentage (%)</option>
-                            <option value="fixed">Fixed (RM)</option>
-                        </select>
-                    </div>
-                </div>
-
                 <CampaignPerks :form="form" :errors="fieldErrors" />
 
                 <div

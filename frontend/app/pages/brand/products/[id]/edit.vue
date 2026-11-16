@@ -46,7 +46,6 @@ interface Product {
     category: string;
     image: string | null;
     images: string[];
-    commission_rate: string;
     commission_type: string;
     campaign_start: string;
     campaign_end: string;
@@ -147,8 +146,6 @@ const form = reactive({
     description: product.value?.description ?? "",
     price: product.value?.price ?? "",
     category: product.value?.category ?? "",
-    commission_rate: product.value?.commission_rate ?? "",
-    commission_type: product.value?.commission_type ?? "percentage",
     campaign_start: product.value?.campaign_start ?? "",
     campaign_end: product.value?.campaign_end ?? "",
     max_affiliates: product.value?.max_affiliates ?? "",
@@ -158,16 +155,7 @@ const form = reactive({
 
 const fieldErrors = reactive<Record<string, string>>({});
 
-const commissionHint = computed(() => {
-    const rate = Number(form.commission_rate);
-    if (!form.commission_rate || isNaN(rate) || rate <= 0) return "";
-    const money = (n: number) =>
-        "RM " + n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    if (form.commission_type === "fixed") return `${money(rate)} per sale`;
-    const price = Number(form.price);
-    if (!price) return `${rate}% of each sale`;
-    return `${rate}% of ${money(price)} = ${money((price * rate) / 100)} per sale`;
-});
+
 
 
 const categories = [
@@ -395,7 +383,7 @@ async function handleSubmit() {
                         <div>
                             <label
                                 class="block text-sm font-medium text-gray-700 mb-1"
-                                >Price (RM)</label
+                                >Price (RM) <span class="text-gray-400 font-normal">(optional)</span></label
                             >
                             <CurrencyInput v-model="form.price" />
                         </div>
@@ -563,41 +551,8 @@ async function handleSubmit() {
                 </div>
             </div>
 
-            <!-- Right column — commission, settings & actions -->
+            <!-- Right column — settings & actions -->
             <div class="space-y-5">
-                <div
-                    class="bg-white rounded-2xl border border-gray-100 p-6 space-y-5"
-                >
-                    <h2 class="font-semibold text-gray-900">Commission</h2>
-
-                    <div>
-                        <label
-                            class="block text-sm font-medium text-gray-700 mb-1"
-                            >Rate</label
-                        >
-                        <input
-                            v-model="form.commission_rate"
-                            type="number"
-                            placeholder="10"
-                            class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <p v-if="commissionHint" class="text-xs text-gray-500 mt-1.5">{{ commissionHint }}</p>
-                    </div>
-                    <div>
-                        <label
-                            class="block text-sm font-medium text-gray-700 mb-1"
-                            >Type</label
-                        >
-                        <select
-                            v-model="form.commission_type"
-                            class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="percentage">Percentage (%)</option>
-                            <option value="fixed">Fixed (RM)</option>
-                        </select>
-                    </div>
-                </div>
-
                 <CampaignPerks :form="form" :errors="fieldErrors" />
 
                 <div

@@ -12,8 +12,6 @@ interface Product {
     description: string;
     price: string | number;
     category: string;
-    commission_rate: string | number;
-    commission_type: string;
     brand: { name: string; avatar?: string | null; brand_profile?: { is_verified: boolean } | null };
     my_application_status: 'pending' | 'approved' | 'rejected' | null;
     platforms?: string[] | null;
@@ -33,12 +31,11 @@ const { $api } = useApi();
 const filters = reactive({
     search: "",
     category: "",
-    commission_type: "",
-    min_commission: "",
-    max_commission: "",
+    min_fee: "",
+    max_fee: "",
     min_price: "",
     max_price: "",
-    sort: "commission_rate",
+    sort: "flat_fee",
 });
 
 const showFilters = ref(false);
@@ -65,9 +62,8 @@ watch(
 watch(
     () => [
         filters.category,
-        filters.commission_type,
-        filters.min_commission,
-        filters.max_commission,
+        filters.min_fee,
+        filters.max_fee,
         filters.min_price,
         filters.max_price,
         filters.sort,
@@ -77,16 +73,15 @@ watch(
 
 function clearFilters() {
     filters.category = "";
-    filters.commission_type = "";
-    filters.min_commission = "";
-    filters.max_commission = "";
+    filters.min_fee = "";
+    filters.max_fee = "";
     filters.min_price = "";
     filters.max_price = "";
-    filters.sort = "commission_rate";
+    filters.sort = "flat_fee";
 }
 
 const sortLabels: Record<string, string> = {
-    commission_rate: "Highest commission",
+    flat_fee: "Highest payment",
     created_at: "Newest",
     price: "Lowest price",
     name: "Name A-Z",
@@ -94,46 +89,36 @@ const sortLabels: Record<string, string> = {
 
 type FilterKey =
     | "category"
-    | "commission_type"
-    | "min_commission"
-    | "max_commission"
+    | "min_fee"
+    | "max_fee"
     | "min_price"
     | "max_price"
     | "sort";
 
 const activeChips = computed(() => {
     const chips: { key: FilterKey; label: string }[] = [];
-    if (filters.commission_type)
-        chips.push({
-            key: "commission_type",
-            label:
-                filters.commission_type === "percentage"
-                    ? "Percentage commission"
-                    : "Fixed commission",
-        });
-    if (filters.min_commission)
-        chips.push({ key: "min_commission", label: `Commission from ${filters.min_commission}` });
-    if (filters.max_commission)
-        chips.push({ key: "max_commission", label: `Commission up to ${filters.max_commission}` });
+    if (filters.min_fee)
+        chips.push({ key: "min_fee", label: `Payment from RM ${filters.min_fee}` });
+    if (filters.max_fee)
+        chips.push({ key: "max_fee", label: `Payment up to RM ${filters.max_fee}` });
     if (filters.min_price)
         chips.push({ key: "min_price", label: `Price from RM ${filters.min_price}` });
     if (filters.max_price)
         chips.push({ key: "max_price", label: `Price up to RM ${filters.max_price}` });
-    if (filters.sort !== "commission_rate")
+    if (filters.sort !== "flat_fee")
         chips.push({ key: "sort", label: `Sorted: ${sortLabels[filters.sort] ?? filters.sort}` });
     return chips;
 });
 
 function removeChip(key: FilterKey) {
-    filters[key] = key === "sort" ? "commission_rate" : "";
+    filters[key] = key === "sort" ? "flat_fee" : "";
 }
 
 const advancedCount = computed(
     () =>
         [
-            filters.commission_type,
-            filters.min_commission,
-            filters.max_commission,
+            filters.min_fee,
+            filters.max_fee,
             filters.min_price,
             filters.max_price,
         ].filter(Boolean).length,
@@ -148,18 +133,6 @@ function resetAll() {
     filters.search = "";
 }
 
-function formatCommission(product: Product): string {
-    const rate = product.commission_rate;
-    if (product.commission_type === "percentage") return `${rate}%`;
-    return `RM ${rate}`;
-}
-
-const commissionTier = (rate: number | string) => {
-    const num = Number(rate);
-    if (num >= 20) return "high";
-    if (num >= 10) return "mid";
-    return "low";
-};
 </script>
 
 <template>
@@ -169,7 +142,7 @@ const commissionTier = (rate: number | string) => {
             <div>
                 <h1 class="mp-title">Marketplace</h1>
                 <p class="mp-subtitle">
-                    Find campaigns to join and earn commissions
+                    Find campaigns to join and get paid for your content
                 </p>
             </div>
             <p v-if="products?.total" class="mp-total">
@@ -205,7 +178,7 @@ const commissionTier = (rate: number | string) => {
             <label class="mp-sort">
                 <span class="mp-sort__label">Sort</span>
                 <select v-model="filters.sort" class="mp-select">
-                    <option value="commission_rate">Highest commission</option>
+                    <option value="flat_fee">Highest payment</option>
                     <option value="created_at">Newest</option>
                     <option value="price">Lowest price</option>
                     <option value="name">Name A-Z</option>
@@ -257,20 +230,12 @@ const commissionTier = (rate: number | string) => {
             <div v-if="showFilters" id="mp-advanced" class="mp-adv">
                 <div class="mp-adv__grid">
                     <label class="mp-field">
-                        <span class="mp-field__label">Commission type</span>
-                        <select v-model="filters.commission_type" class="mp-select mp-select--field">
-                            <option value="">All types</option>
-                            <option value="percentage">Percentage (%)</option>
-                            <option value="fixed">Fixed (RM)</option>
-                        </select>
+                        <span class="mp-field__label">Min payment (RM)</span>
+                        <input v-model="filters.min_fee" type="number" min="0" placeholder="0" class="mp-input" />
                     </label>
                     <label class="mp-field">
-                        <span class="mp-field__label">Min commission</span>
-                        <input v-model="filters.min_commission" type="number" min="0" placeholder="0" class="mp-input" />
-                    </label>
-                    <label class="mp-field">
-                        <span class="mp-field__label">Max commission</span>
-                        <input v-model="filters.max_commission" type="number" min="0" placeholder="100" class="mp-input" />
+                        <span class="mp-field__label">Max payment (RM)</span>
+                        <input v-model="filters.max_fee" type="number" min="0" placeholder="1000" class="mp-input" />
                     </label>
                     <label class="mp-field">
                         <span class="mp-field__label">Min price (RM)</span>
@@ -351,19 +316,18 @@ const commissionTier = (rate: number | string) => {
                     >
                         <li v-for="p in product.platforms" :key="p" class="mp-tag">{{ PLATFORM_LABELS[p] || p }}</li>
                         <li v-if="product.free_sample" class="mp-tag mp-tag--perk">Free sample</li>
-                        <li v-if="Number(product.flat_fee) > 0" class="mp-tag mp-tag--perk">+ RM {{ Number(product.flat_fee).toLocaleString("en-MY") }} fee</li>
                     </ul>
 
                     <dl class="mp-card__stats">
                         <div>
-                            <dt>Commission</dt>
-                            <dd class="mp-card__rate" :data-tier="commissionTier(product.commission_rate)">
-                                {{ formatCommission(product) }}
+                            <dt>Payment</dt>
+                            <dd class="mp-card__rate" :data-tier="hasPayment(product) ? 'high' : 'low'">
+                                {{ paymentLabel(product) }}
                             </dd>
                         </div>
                         <div>
                             <dt>Price</dt>
-                            <dd class="mp-card__price">RM {{ product.price }}</dd>
+                            <dd class="mp-card__price">{{ product.price != null ? `RM ${product.price}` : "—" }}</dd>
                         </div>
                     </dl>
 

@@ -12,8 +12,8 @@ interface Product {
     id: number;
     name: string;
     price: number;
-    commission_rate: string;
-    commission_type: string;
+    flat_fee?: string | number | null;
+    free_sample?: boolean;
 }
 interface Creator {
     id: number;
@@ -104,10 +104,7 @@ function formatDate(dateStr: string): string {
 }
 
 function formatCommission(a: Application): string {
-    const rate = a.product.commission_rate;
-    return a.product.commission_type === "percentage"
-        ? `${rate}%`
-        : `RM ${rate}`;
+    return paymentLabel(a.product);
 }
 
 const statusClasses: Record<string, string> = {

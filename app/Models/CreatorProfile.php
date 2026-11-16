@@ -14,6 +14,9 @@ class CreatorProfile extends Model
         'tiktok_handle',
         'followers',
         'avg_views',
+        'payout_bank',
+        'payout_account_name',
+        'payout_account_number',
     ];
 
     protected function casts(): array

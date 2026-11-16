@@ -12,8 +12,8 @@ interface Application {
     product: {
         id: number;
         name: string;
-        commission_rate: string;
-        commission_type: string;
+        flat_fee?: string | number | null;
+        free_sample?: boolean;
         category: string;
         price: number;
     };
@@ -68,14 +68,14 @@ const columns: ColumnDef<Application, any>[] = [
                 ),
             ]),
     }),
-    columnHelper.accessor((row) => Number(row.product?.commission_rate), {
-        id: "commission",
-        header: "Commission",
+    columnHelper.accessor((row) => Number(row.product?.flat_fee ?? 0), {
+        id: "payment",
+        header: "Payment",
         cell: (info) =>
             h(
                 "span",
                 { class: "text-green-600 font-medium" },
-                `${info.row.original.product?.commission_rate}${info.row.original.product?.commission_type === "percentage" ? "%" : " RM"}`,
+                info.row.original.product ? paymentLabel(info.row.original.product) : "-",
             ),
     }),
     columnHelper.accessor("status", {

@@ -7,8 +7,8 @@ definePageMeta({
 interface Product {
     id: number;
     name: string;
-    commission_rate: string;
-    commission_type: string;
+    flat_fee?: string | number | null;
+    free_sample?: boolean;
     category: string;
     price: number;
 }
@@ -307,17 +307,12 @@ const compact = (n: number) =>
                             {{ product.name }}
                         </p>
                         <p class="text-xs text-gray-400 mt-0.5">
-                            {{ product.category }} · RM {{ product.price }}
+                            {{ product.category }}<template v-if="product.price != null"> · RM {{ product.price }}</template>
                         </p>
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="text-sm font-semibold text-green-600">
-                            {{ product.commission_rate
-                            }}{{
-                                product.commission_type === "percentage"
-                                    ? "%"
-                                    : " RM"
-                            }}
+                            {{ paymentLabel(product) }}
                         </span>
                         <NuxtLink
                             :to="`/creator/marketplace/${product.id}`"

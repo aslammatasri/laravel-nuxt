@@ -17,7 +17,7 @@ class ProductController extends Controller
     {
         $filters = $request->only([
             'search', 'category', 'commission_type',
-            'min_commission', 'max_commission',
+            'min_commission', 'max_commission', 'min_fee', 'max_fee',
             'min_price', 'max_price', 'sort',
         ]);
         $products = $this->productService->getMarketplaceProducts($filters);
