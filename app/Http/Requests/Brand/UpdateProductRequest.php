@@ -79,7 +79,7 @@ class UpdateProductRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required'            => 'Enter a product name.',
+            'name.required'            => 'Enter a campaign name.',
             'description.required'     => 'Add a short description.',
             'price.numeric'            => 'Price must be a number.',
             'price.min'                => 'Price cannot be negative.',

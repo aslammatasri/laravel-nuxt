@@ -14,31 +14,6 @@ const loading = ref(false);
 const productId = route.params.id;
 
 // ── Fetch existing product data ────────────────────────────────
-// API shape (no _key)
-interface ApiVariationOption {
-    value: string;
-    price: number;
-}
-interface ApiVariation {
-    id?: number;
-    name: string;
-    options: ApiVariationOption[];
-}
-// Local editable shape (stable _key for v-for)
-interface VariationOption {
-    _key: number;
-    value: string;
-    price: number;
-}
-interface Variation {
-    _key: number;
-    id?: number;
-    name: string;
-    options: VariationOption[];
-}
-
-let _seq = 0;
-const nextKey = () => ++_seq;
 interface Product {
     name: string;
     description: string;
@@ -51,7 +26,6 @@ interface Product {
     campaign_end: string;
     max_affiliates: number;
     status: string;
-    variations: ApiVariation[];
 }
 
 const { data: product } = await useAsyncData(`product-${productId}`, () =>
@@ -94,50 +68,6 @@ function removeNewImageAt(index: number) {
 
 function removeExistingImage(path: string) {
     deleteImagePaths.value.push(path);
-}
-
-// ── Variations ────────────────────────────────────────────────
-const variations = ref<Variation[]>(
-    (product.value?.variations ?? []).map((v) => ({
-        _key: nextKey(),
-        id: v.id,
-        name: v.name,
-        options: v.options.map((o) => ({
-            _key: nextKey(),
-            value: o.value,
-            price: o.price,
-        })),
-    })),
-);
-const originalVariationIds = new Set(
-    (product.value?.variations ?? []).map((v) => v.id!),
-);
-
-function addVariation() {
-    variations.value.push({
-        _key: nextKey(),
-        name: "",
-        options: [{ _key: nextKey(), value: "", price: 0 }],
-    });
-}
-function removeVariation(i: number) {
-    variations.value.splice(i, 1);
-}
-function addOption(vi: number) {
-    variations.value[vi]!.options.push({
-        _key: nextKey(),
-        value: "",
-        price: 0,
-    });
-}
-function removeOption(vi: number, oi: number) {
-    variations.value[vi]!.options.splice(oi, 1);
-}
-
-const hasVariations = ref(variations.value.length > 0);
-function setHasVariations(v: boolean) {
-    hasVariations.value = v;
-    if (v && !variations.value.length) addVariation();
 }
 
 // ── Pre-fill form with existing data ──────────────────────────
@@ -192,45 +122,6 @@ async function handleSubmit() {
 
         await $api(`/brand/products/${productId}`, { method: "POST", body });
 
-        // Delete removed variations
-        const currentIds = new Set(
-            (hasVariations.value ? variations.value : [])
-                .filter((v) => v.id)
-                .map((v) => v.id!),
-        );
-        for (const id of originalVariationIds) {
-            if (!currentIds.has(id)) {
-                await $api(`/brand/products/${productId}/variations/${id}`, {
-                    method: "DELETE",
-                });
-            }
-        }
-
-        // Create new / update existing
-        for (const v of hasVariations.value ? variations.value : []) {
-            if (!v.name.trim()) continue;
-            const opts = v.options.filter((o) => o.value.trim());
-            if (!opts.length) continue;
-            const varBody = {
-                name: v.name,
-                options: opts.map((o) => ({
-                    value: o.value,
-                    price: Number(o.price) || 0,
-                })),
-            };
-            if (v.id) {
-                await $api(`/brand/products/${productId}/variations/${v.id}`, {
-                    method: "PUT",
-                    body: varBody,
-                });
-            } else {
-                await $api(`/brand/products/${productId}/variations`, {
-                    method: "POST",
-                    body: varBody,
-                });
-            }
-        }
-
         await router.push("/brand/products");
     } catch (err: any) {
         const parsed = parseApiError(err, "Failed to update product");
@@ -271,13 +162,13 @@ async function handleSubmit() {
                 <div
                     class="bg-white rounded-2xl border border-gray-100 p-6 space-y-5"
                 >
-                    <h2 class="font-semibold text-gray-900">Product Info</h2>
+                    <h2 class="font-semibold text-gray-900">Campaign Info</h2>
 
                     <!-- Image upload -->
                     <div>
                         <label
                             class="block text-sm font-medium text-gray-700 mb-2"
-                            >Product Images</label
+                            >Campaign Images</label
                         >
 
                         <!-- Existing images -->
@@ -356,12 +247,12 @@ async function handleSubmit() {
                     <div>
                         <label
                             class="block text-sm font-medium text-gray-700 mb-1"
-                            >Product Name</label
+                            >Campaign Name</label
                         >
                         <input
                             v-model="form.name"
                             type="text"
-                            placeholder="e.g. Skintific Sunscreen SPF50"
+                            placeholder="e.g. Skintific Sunscreen SPF50 Launch"
                             class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                     </div>
@@ -374,7 +265,7 @@ async function handleSubmit() {
                         <textarea
                             v-model="form.description"
                             rows="5"
-                            placeholder="Describe your product and what creators should highlight..."
+                            placeholder="Describe the campaign and what creators should highlight..."
                             class="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
                         />
                     </div>
@@ -442,111 +333,6 @@ async function handleSubmit() {
                         <DateInput v-model="form.application_deadline" :invalid="!!fieldErrors.application_deadline" />
                         <p v-if="fieldErrors.application_deadline" class="text-xs text-red-500 mt-1">{{ fieldErrors.application_deadline }}</p>
                         <p v-else class="text-xs text-gray-400 mt-1">Creators cannot apply after this date. Leave empty to accept applications until the campaign ends.</p>
-                    </div>
-                </div>
-
-                <!-- Variations -->
-                <div
-                    class="bg-white rounded-2xl border border-gray-100 p-6 space-y-4"
-                >
-                    <div class="flex items-center justify-between">
-                        <h2 class="font-semibold text-gray-900">Variations</h2>
-                        <button
-                            v-if="hasVariations"
-                            type="button"
-                            @click="addVariation"
-                            class="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                        >
-                            + Add Variation
-                        </button>
-                    </div>
-
-                    <div class="flex items-center justify-between gap-4">
-                        <div>
-                            <p class="text-sm font-medium text-gray-900">
-                                This product has variations
-                            </p>
-                            <p class="text-xs text-gray-500 mt-0.5">
-                                Sizes, flavors, pack sizes, etc.
-                            </p>
-                        </div>
-                        <button
-                            type="button"
-                            role="switch"
-                            :aria-checked="hasVariations"
-                            aria-label="This product has variations"
-                            @click="setHasVariations(!hasVariations)"
-                            class="relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-                            :class="hasVariations ? 'bg-blue-600' : 'bg-gray-200'"
-                        >
-                            <span
-                                class="inline-block h-5 w-5 rounded-full bg-white shadow transition-transform"
-                                :class="hasVariations ? 'translate-x-5' : 'translate-x-0.5'"
-                            />
-                        </button>
-                    </div>
-
-                    <p
-                        v-if="!hasVariations"
-                        class="text-sm text-gray-400 text-center py-3"
-                    >
-                        No variations — sold as a single option.
-                    </p>
-
-                    <div
-                        v-for="(variation, vi) in hasVariations ? variations : []"
-                        :key="variation._key"
-                        class="border border-gray-100 rounded-xl p-4 space-y-3"
-                    >
-                        <div class="flex items-center gap-3">
-                            <input
-                                v-model="variation.name"
-                                type="text"
-                                placeholder="Variation name (e.g. Size, Flavor)"
-                                class="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                            <button
-                                type="button"
-                                @click="removeVariation(vi)"
-                                class="text-gray-400 hover:text-red-500 transition-colors text-lg leading-none"
-                            >
-                                ✕
-                            </button>
-                        </div>
-
-                        <div class="space-y-2">
-                            <div
-                                v-for="(option, oi) in variation.options"
-                                :key="option._key"
-                                class="flex items-center gap-2"
-                            >
-                                <input
-                                    v-model="option.value"
-                                    type="text"
-                                    placeholder="Option (e.g. Small)"
-                                    class="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                />
-                                <div class="w-32">
-                                    <CurrencyInput v-model="option.price" compact />
-                                </div>
-                                <button
-                                    type="button"
-                                    @click="removeOption(vi, oi)"
-                                    :disabled="variation.options.length === 1"
-                                    class="text-gray-400 hover:text-red-500 disabled:opacity-30 transition-colors"
-                                >
-                                    ✕
-                                </button>
-                            </div>
-                        </div>
-
-                        <button
-                            type="button"
-                            @click="addOption(vi)"
-                            class="text-xs text-blue-600 hover:text-blue-700 font-medium transition-colors"
-                        >
-                            + Add option
-                        </button>
                     </div>
                 </div>
             </div>

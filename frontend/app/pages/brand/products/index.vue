@@ -37,19 +37,61 @@ const hasEnded = (p: Product) =>
     !!p.campaign_end &&
     new Date(p.campaign_end).getTime() < Date.now();
 
-async function toggleStatus(product: Product) {
-    await $api(`/brand/products/${product.id}`, {
-        method: "PUT",
-        body: { status: product.status === "active" ? "paused" : "active" },
-    });
+async function setStatus(product: Product, status: "active" | "paused") {
+    await $api(`/brand/products/${product.id}`, { method: "PUT", body: { status } });
     await refresh();
 }
 
-async function deleteProduct(id: number) {
-    if (!confirm("Are you sure you want to delete this campaign?")) return;
+// Pausing hides the campaign from creators, so it asks first. Activating is harmless and runs directly.
+const toPause = ref<Product | null>(null);
+const pausing = ref(false);
+const pauseError = ref<string | null>(null);
 
-    await $api(`/brand/products/${id}`, { method: "DELETE" });
-    await refresh();
+function onToggle(product: Product) {
+    if (product.status === "active") {
+        pauseError.value = null;
+        toPause.value = product;
+    } else {
+        setStatus(product, "active");
+    }
+}
+async function confirmPause() {
+    if (!toPause.value) return;
+    pausing.value = true;
+    pauseError.value = null;
+    try {
+        await setStatus(toPause.value, "paused");
+        toPause.value = null;
+    } catch (e) {
+        pauseError.value =
+            (e as { data?: { message?: string } })?.data?.message ?? "Could not pause this campaign. Try again.";
+    } finally {
+        pausing.value = false;
+    }
+}
+
+const toDelete = ref<Product | null>(null);
+const deleting = ref(false);
+const deleteError = ref<string | null>(null);
+
+function askDelete(product: Product) {
+    deleteError.value = null;
+    toDelete.value = product;
+}
+async function confirmDelete() {
+    if (!toDelete.value) return;
+    deleting.value = true;
+    deleteError.value = null;
+    try {
+        await $api(`/brand/products/${toDelete.value.id}`, { method: "DELETE" });
+        toDelete.value = null;
+        await refresh();
+    } catch (e) {
+        deleteError.value =
+            (e as { data?: { message?: string } })?.data?.message ?? "Could not delete this campaign. Try again.";
+    } finally {
+        deleting.value = false;
+    }
 }
 </script>
 
@@ -170,13 +212,13 @@ async function deleteProduct(id: number) {
                         </NuxtLink>
                         <button
                             v-if="product.status !== 'closed'"
-                            @click="toggleStatus(product)"
+                            @click="onToggle(product)"
                             class="flex-1 text-center border border-gray-200 text-gray-600 px-3 py-2 rounded-xl text-xs hover:bg-gray-50 transition-colors"
                         >
                             {{ product.status === "active" ? "Pause" : "Activate" }}
                         </button>
                         <button
-                            @click="deleteProduct(product.id)"
+                            @click="askDelete(product)"
                             class="flex-1 text-center border border-red-100 text-red-500 px-3 py-2 rounded-xl text-xs hover:bg-red-50 transition-colors"
                         >
                             Delete
@@ -185,5 +227,39 @@ async function deleteProduct(id: number) {
                 </div>
             </div>
         </div>
+
+        <ConfirmDialog
+            :open="!!toPause"
+            title="Pause this campaign?"
+            confirm-label="Pause campaign"
+            :loading="pausing"
+            :error="pauseError"
+            @confirm="confirmPause"
+            @cancel="toPause = null"
+        >
+            <p>
+                <strong class="text-gray-800">{{ toPause?.name }}</strong> will be hidden from the marketplace and creators can no longer apply.
+            </p>
+            <p class="mt-2">Creators already approved keep their collaboration. You can activate it again any time.</p>
+        </ConfirmDialog>
+
+        <ConfirmDialog
+            :open="!!toDelete"
+            danger
+            title="Delete this campaign?"
+            confirm-label="Delete campaign"
+            :loading="deleting"
+            :error="deleteError"
+            @confirm="confirmDelete"
+            @cancel="toDelete = null"
+        >
+            <p>
+                <strong class="text-gray-800">{{ toDelete?.name }}</strong> and everything attached to it will be permanently removed: applications, creator checklists and messages. This cannot be undone.
+            </p>
+            <p v-if="toDelete?.pending_applications_count" class="mt-2 text-amber-700">
+                {{ toDelete.pending_applications_count }} pending {{ toDelete.pending_applications_count === 1 ? "application" : "applications" }} will be deleted too.
+            </p>
+            <p class="mt-2">To stop new applications but keep the history, use Pause instead.</p>
+        </ConfirmDialog>
     </div>
 </template>
