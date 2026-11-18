@@ -8,6 +8,8 @@ interface Collab {
     state: "active" | "ending_soon" | "ended";
     days_left: number | null;
     tasks: CollabTask[];
+    can_review?: boolean;
+    review?: MyReview | null;
     fee?: { amount: number; status: 'none' | 'pending' | 'due' | 'paid'; approved: number; total: number; reference?: string | null };
     product: {
         id: number;
@@ -18,7 +20,7 @@ interface Collab {
         price: string | number | null;
         campaign_start: string | null;
         campaign_end: string | null;
-        brand: { name: string | null; avatar?: string | null };
+        brand: { id?: number; name: string | null; avatar?: string | null };
         platforms?: string[] | null;
         content_types?: string[] | null;
         posts_required?: number | null;
@@ -32,6 +34,7 @@ interface Collab {
 }
 
 import type { CollabTask } from "~/components/CollabChecklist.vue";
+import type { MyReview } from "~/components/BrandReviewForm.vue";
 
 const nowMs = useState<number>("now-ms", () => Date.now()); // same value on server and client
 const config = useRuntimeConfig();
@@ -86,6 +89,9 @@ const groups = computed(() => {
     ].filter((g) => g.items.length);
 });
 
+function setReview(c: Collab, r: MyReview | null) {
+    c.review = r;
+}
 function setTasks(c: Collab, t: CollabTask[]) {
     c.tasks = t;
 }
@@ -189,7 +195,11 @@ const hasDeliverables = (c: Collab) =>
                                 <h3 class="cl-name">{{ c.product.name }}</h3>
                                 <p class="cl-brand">
                                     <Avatar :src="c.product.brand?.avatar" :name="c.product.brand?.name" size="xxs" />
-                                    <span>by {{ c.product.brand?.name }}</span>
+                                    <span>
+                                        by
+                                        <NuxtLink v-if="c.product.brand?.id" :to="`/creator/brands/${c.product.brand.id}`" class="hover:underline">{{ c.product.brand.name }}</NuxtLink>
+                                        <template v-else>{{ c.product.brand?.name }}</template>
+                                    </span>
                                 </p>
                                 <ul v-if="c.product.platforms?.length" class="cl-tags" aria-label="Platforms">
                                     <li v-for="p in c.product.platforms" :key="p" class="cl-tag">{{ PLATFORM_LABELS[p] || p }}</li>
@@ -219,6 +229,7 @@ const hasDeliverables = (c: Collab) =>
 
                         <div class="cl-actions">
                             <NuxtLink :to="`/messages?application=${c.id}`" class="cl-btn">Message brand</NuxtLink>
+                            <button v-if="c.can_review && !c.review" type="button" class="cl-link" @click="expandedId = c.id">Review brand</button>
                             <button
                                 type="button"
                                 class="cl-link"
@@ -241,6 +252,14 @@ const hasDeliverables = (c: Collab) =>
                                 <template v-else-if="c.fee.status === 'due'">All deliverables approved. The brand will pay you.</template>
                                 <template v-else>Paid after the brand approves your deliverables ({{ c.fee.approved }}/{{ c.fee.total }} approved).</template>
                             </p>
+                        </div>
+                        <div v-if="c.can_review" class="cl-brief__check cl-track">
+                            <BrandReviewForm
+                                :collab-id="c.id"
+                                :brand-name="c.product.brand?.name ?? null"
+                                :review="c.review ?? null"
+                                @update:review="setReview(c, $event)"
+                            />
                         </div>
                         <div class="cl-brief__check">
                             <CollabChecklist :collab-id="c.id" :tasks="c.tasks" :ended="c.state === 'ended'" @update:tasks="setTasks(c, $event)" />

@@ -44,7 +44,7 @@ interface Product {
     campaign_end: string;
     max_affiliates: number;
     spots_left: number;
-    brand: { name: string; avatar?: string | null; brand_profile?: { is_verified: boolean } | null };
+    brand: { id?: number; name: string; avatar?: string | null; brand_profile?: { is_verified: boolean } | null };
     variations: Variation[];
     my_application_status: 'pending' | 'approved' | 'rejected' | null;
     my_subscribers?: number;
@@ -195,7 +195,9 @@ async function handleApply() {
                         <span class="pd-cat">{{ product.category }}</span>
                         <span v-if="product.brand?.name" class="pd-brand pd-brand--row">
                             <Avatar :src="product.brand.avatar" :name="product.brand.name" size="xs" />
-                            by {{ product.brand.name }}
+                            by
+                            <NuxtLink v-if="product.brand.id" :to="`/creator/brands/${product.brand.id}`" class="hover:underline">{{ product.brand.name }}</NuxtLink>
+                            <template v-else>{{ product.brand.name }}</template>
                             <span v-if="product.brand.brand_profile?.is_verified" class="pd-verified" title="Verified brand">✓ Verified</span>
                         </span>
                     </p>

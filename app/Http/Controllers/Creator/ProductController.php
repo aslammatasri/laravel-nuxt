@@ -44,7 +44,7 @@ class ProductController extends Controller
     public function show(int $id, Request $request)
     {
         $product = $this->productService->getProductDetail($id);
-        $product->load('brand.brandProfile:id,user_id,is_verified');
+        $product->load(['brand:id,name,avatar', 'brand.brandProfile:id,user_id,is_verified']);
 
         // Latest application by this creator, so the UI can block re-applying
         $latest = ProductApplication::where('creator_id', $request->user()->id)

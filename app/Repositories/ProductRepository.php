@@ -20,7 +20,7 @@ class ProductRepository extends BaseRepository implements ProductRepositoryInter
     public function getActiveProducts(array $filters = [], int $perPage = 15)
     {
         $query = $this->model
-            ->with('brand.brandProfile:id,user_id,is_verified')
+            ->with(['brand:id,name,avatar', 'brand.brandProfile:id,user_id,is_verified'])
             ->where('status', 'active')
             ->whereHas('brand', fn($q) => $q->whereNull('suspended_at'))
             ->where(fn($q) => $q->whereNull('campaign_end')->orWhere('campaign_end', '>=', now()));

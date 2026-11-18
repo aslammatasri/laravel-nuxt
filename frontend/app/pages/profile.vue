@@ -28,6 +28,37 @@ const showCurrent   = ref(false)
 const showNew       = ref(false)
 const showConfirm   = ref(false)
 
+// Brand only: public "about" text creators read on the brand page
+const ABOUT_MAX    = 1000
+const about        = ref('')
+const aboutSaved   = ref('')
+const aboutLoading = ref(false)
+const aboutSuccess = ref('')
+const aboutError   = ref('')
+const aboutUnchanged = computed(() => about.value.trim() === aboutSaved.value)
+
+if (authStore.isBrand) {
+  $api<{ about: string | null }>('/brand/about')
+    .then((r) => { about.value = r.about ?? ''; aboutSaved.value = about.value.trim() })
+    .catch(() => {})
+}
+
+async function handleSaveAbout() {
+  aboutLoading.value = true
+  aboutSuccess.value = ''
+  aboutError.value   = ''
+  try {
+    const res = await $api<{ about: string | null }>('/brand/about', { method: 'PUT', body: { about: about.value } })
+    about.value      = res.about ?? ''
+    aboutSaved.value = about.value
+    aboutSuccess.value = 'Saved. Creators see this on your brand page.'
+  } catch (err: any) {
+    aboutError.value = parseApiError(err, 'Could not save. Try again.').message
+  } finally {
+    aboutLoading.value = false
+  }
+}
+
 const avatarLoading = ref(false)
 const avatarError   = ref('')
 
@@ -244,6 +275,43 @@ async function handleUpdatePassword() {
                 {{ nameLoading ? 'Saving…' : 'Save changes' }}
               </button>
               <span class="st-hint">{{ nameForm.name.length }} characters</span>
+            </div>
+          </form>
+        </section>
+
+        <!-- About the brand (brands only) -->
+        <section v-if="authStore.isBrand" class="st-card" aria-labelledby="st-about">
+          <header class="st-card__head">
+            <h2 id="st-about" class="st-card__title">About your brand</h2>
+            <p class="st-card__desc">Tell creators who you are. This shows on your public brand page.</p>
+          </header>
+
+          <form class="st-form" @submit.prevent="handleSaveAbout">
+            <Transition name="st-fade">
+              <p v-if="aboutSuccess" class="st-alert st-alert--ok" role="status">{{ aboutSuccess }}</p>
+            </Transition>
+            <Transition name="st-fade">
+              <p v-if="aboutError" class="st-alert st-alert--bad" role="alert">{{ aboutError }}</p>
+            </Transition>
+
+            <label class="st-label" for="st-about-text">Introduction</label>
+            <textarea
+              id="st-about-text"
+              v-model="about"
+              rows="5"
+              :maxlength="ABOUT_MAX"
+              placeholder="e.g. We are a Kuala Lumpur skincare label. We love working with creators who test products honestly, and we pay on time."
+              class="st-input"
+              @input="aboutSuccess = ''; aboutError = ''"
+            />
+
+            <div class="st-actions">
+              <button type="submit" :disabled="aboutLoading || aboutUnchanged" class="st-btn">
+                <span v-if="aboutLoading" class="st-spin" aria-hidden="true" />
+                <AppIcon v-else name="check" class="st-btn__icon" />
+                {{ aboutLoading ? 'Saving…' : 'Save' }}
+              </button>
+              <span class="st-hint">{{ about.length }} / {{ ABOUT_MAX }}</span>
             </div>
           </form>
         </section>
@@ -623,6 +691,7 @@ async function handleUpdatePassword() {
   color: var(--st-ink);
 }
 .st-input--toggle { padding-right: 2.9rem; }
+textarea.st-input { resize: vertical; font-family: inherit; line-height: 1.5; min-height: 7rem; }
 .st-input::placeholder { color: var(--st-faint); }
 .st-input:hover { border-color: var(--st-faint); }
 .st-input:focus {
