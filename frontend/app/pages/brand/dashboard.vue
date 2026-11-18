@@ -27,6 +27,19 @@ const authStore = useAuth();
 
 // ── Fetch stats ────────────────────────────────────────────────
 interface Stats {
+    actions: {
+        pending_applications: number;
+        deliverables_to_review: number;
+        fees_due: { count: number; amount: number };
+        overdue_creators: number;
+    };
+    spend: { due: number; awaiting: number; paid_this_month: number; paid_total: number };
+    rating: {
+        average: number | null;
+        count: number;
+        latest: { rating: number; body: string | null; creator: string | null; campaign: string | null } | null;
+    };
+    setup: { has_about: boolean; has_campaign: boolean; has_creator: boolean };
     applications: {
         total: number;
         pending: number;
@@ -119,22 +132,37 @@ const topMax = computed(() =>
     Math.max(1, ...topProducts.value.map((p) => p.applications)),
 );
 
-// Donut: three arcs on a circle of circumference 100 (r = 15.9155)
-const donutSegments = computed(() => {
-    const total = appStats.value.total;
-    const parts = [
-        { key: "approved", label: "Approved", value: appStats.value.approved, color: "#22c55e" },
-        { key: "pending", label: "Pending", value: appStats.value.pending, color: "#eab308" },
-        { key: "rejected", label: "Rejected", value: appStats.value.rejected, color: "#ef4444" },
+const money = (n: number) =>
+    "RM " + n.toLocaleString("en-MY", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+// "Needs your action": the things only the brand can unblock, most urgent first
+const actionItems = computed(() => {
+    const a = stats.value?.actions;
+    if (!a) return [];
+    return [
+        { key: "fees", label: "Fees to pay", value: a.fees_due.count, sub: a.fees_due.count ? money(a.fees_due.amount) + " due" : "Nothing due", to: "/brand/creators", tone: "amber" },
+        { key: "deliverables", label: "Deliverables to review", value: a.deliverables_to_review, sub: "Waiting for your approval", to: "/brand/creators", tone: "blue" },
+        { key: "applications", label: "Applications to review", value: a.pending_applications, sub: "Creators waiting for an answer", to: "/brand/applications?status=pending", tone: "blue" },
+        { key: "overdue", label: "Overdue creators", value: a.overdue_creators, sub: "Past a task due date", to: "/brand/creators", tone: "red" },
     ];
-    let offset = 0;
-    return parts.map((p) => {
-        const pct = total ? (p.value / total) * 100 : 0;
-        const seg = { ...p, pct, dash: `${pct} ${100 - pct}`, offset: -offset };
-        offset += pct;
-        return seg;
-    });
 });
+const allCaughtUp = computed(() => actionItems.value.length > 0 && actionItems.value.every((i) => i.value === 0));
+
+const spend = computed(() => stats.value?.spend ?? { due: 0, awaiting: 0, paid_this_month: 0, paid_total: 0 });
+const rating = computed(() => stats.value?.rating ?? { average: null, count: 0, latest: null });
+
+const setupSteps = computed(() => {
+    const st = stats.value?.setup;
+    if (!st) return [];
+    return [
+        { key: "about", label: "Write your brand introduction", done: st.has_about, to: "/profile" },
+        { key: "campaign", label: "Create your first campaign", done: st.has_campaign, to: "/brand/products/create" },
+        { key: "creator", label: "Approve your first creator", done: st.has_creator, to: "/brand/applications" },
+    ];
+});
+const setupDone = computed(() => setupSteps.value.filter((x) => x.done).length);
+const showSetup = computed(() => setupSteps.value.length > 0 && setupDone.value < setupSteps.value.length);
+
 const activePct = computed(() =>
     prod.value.total ? (prod.value.active / prod.value.total) * 100 : 0,
 );
@@ -145,10 +173,10 @@ const activePct = computed(() =>
         <!-- Header -->
         <div class="mb-8">
             <h1 class="text-2xl font-bold text-gray-900">
-                Good morning, {{ authStore.user?.name }} 👋
+                Welcome back, {{ authStore.user?.name }}
             </h1>
             <p class="text-gray-500 mt-1">
-                Here's what's happening with your campaigns
+                What needs you today, and where your budget stands
             </p>
         </div>
 
@@ -188,74 +216,114 @@ const activePct = computed(() =>
             <span class="text-sm font-medium shrink-0">Open →</span>
         </NuxtLink>
 
-        <!-- Stats Grid -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-6">
-            <div class="bg-white rounded-2xl p-6 border border-gray-100">
-                <p class="text-sm text-gray-500 mb-1">Total Applications</p>
-                <p class="text-3xl font-bold text-gray-900">{{ appStats.total }}</p>
-                <NuxtLink to="/brand/applications" class="text-xs text-blue-600 hover:underline mt-2 block">
-                    View all →
-                </NuxtLink>
+        <!-- Setup checklist (new brands only) -->
+        <section v-if="showSetup" class="bg-white rounded-2xl border border-gray-100 p-6 mb-6" aria-labelledby="bd-setup">
+            <div class="flex items-center justify-between gap-4 mb-3">
+                <h2 id="bd-setup" class="font-semibold text-gray-900">Get set up</h2>
+                <span class="text-sm text-gray-500 tabular-nums">{{ setupDone }} of {{ setupSteps.length }} done</span>
             </div>
-            <div class="rounded-2xl p-6 border border-yellow-100 bg-yellow-50">
-                <p class="text-sm text-yellow-700 mb-1">Pending Review</p>
-                <p class="text-3xl font-bold text-yellow-800">{{ appStats.pending }}</p>
-                <NuxtLink to="/brand/applications?status=pending" class="text-xs text-yellow-700 hover:underline mt-2 block">
-                    Review now →
-                </NuxtLink>
+            <ul class="divide-y divide-gray-50">
+                <li v-for="step in setupSteps" :key="step.key">
+                    <NuxtLink :to="step.to" class="flex items-center gap-3 py-3 group">
+                        <span
+                            class="w-5 h-5 rounded-full border flex items-center justify-center shrink-0"
+                            :class="step.done ? 'bg-blue-600 border-blue-600 text-white' : 'border-gray-300'"
+                            aria-hidden="true"
+                        >
+                            <svg v-if="step.done" viewBox="0 0 20 20" class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m4.5 10.5 3.5 3.5 7.5-8" /></svg>
+                        </span>
+                        <span class="text-sm" :class="step.done ? 'text-gray-400 line-through' : 'text-gray-800 group-hover:text-blue-700'">{{ step.label }}</span>
+                        <span v-if="!step.done" class="ml-auto text-sm font-medium text-blue-600">Start →</span>
+                    </NuxtLink>
+                </li>
+            </ul>
+        </section>
+
+        <!-- Needs your action -->
+        <section class="mb-6" aria-labelledby="bd-actions">
+            <div class="flex items-baseline justify-between mb-3">
+                <h2 id="bd-actions" class="font-semibold text-gray-900">Needs your action</h2>
+                <span v-if="allCaughtUp" class="text-sm text-green-700">You're all caught up</span>
             </div>
-            <div class="rounded-2xl p-6 border border-green-100 bg-green-50">
-                <p class="text-sm text-green-700 mb-1">Approved</p>
-                <p class="text-3xl font-bold text-green-800">{{ appStats.approved }}</p>
-                <NuxtLink to="/brand/applications?status=approved" class="text-xs text-green-700 hover:underline mt-2 block">
-                    View creators →
-                </NuxtLink>
-            </div>
-            <div class="rounded-2xl p-6 border border-red-100 bg-red-50">
-                <p class="text-sm text-red-700 mb-1">Rejected</p>
-                <p class="text-3xl font-bold text-red-800">{{ appStats.rejected }}</p>
-                <NuxtLink to="/brand/applications?status=rejected" class="text-xs text-red-700 hover:underline mt-2 block">
-                    View rejected →
-                </NuxtLink>
-            </div>
+            <ul class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <li v-for="i in actionItems" :key="i.key">
+                    <NuxtLink
+                        :to="i.to"
+                        class="block h-full rounded-2xl border p-5 transition-colors focus-visible:outline-2 focus-visible:outline-blue-600"
+                        :class="
+                            i.value === 0
+                                ? 'bg-white border-gray-100 hover:border-gray-200'
+                                : i.tone === 'amber'
+                                  ? 'bg-yellow-50 border-yellow-100 hover:border-yellow-200'
+                                  : i.tone === 'red'
+                                    ? 'bg-red-50 border-red-100 hover:border-red-200'
+                                    : 'bg-blue-50 border-blue-100 hover:border-blue-200'
+                        "
+                    >
+                        <p class="text-sm" :class="i.value === 0 ? 'text-gray-500' : 'text-gray-700'">{{ i.label }}</p>
+                        <p class="text-3xl font-bold mt-1 tabular-nums" :class="i.value === 0 ? 'text-gray-300' : 'text-gray-900'">{{ i.value }}</p>
+                        <p class="text-xs mt-1" :class="i.value === 0 ? 'text-gray-400' : 'text-gray-600'">{{ i.sub }}</p>
+                    </NuxtLink>
+                </li>
+            </ul>
+        </section>
+
+        <!-- Spend + rating -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+            <section class="lg:col-span-2 bg-white rounded-2xl border border-gray-100 p-6" aria-labelledby="bd-spend">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 id="bd-spend" class="font-semibold text-gray-900">Creator fees</h2>
+                    <NuxtLink to="/brand/creators" class="text-sm text-blue-600 hover:underline">Pay creators</NuxtLink>
+                </div>
+                <dl class="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-4">
+                    <div>
+                        <dt class="text-xs text-gray-400">Due now</dt>
+                        <dd class="text-xl font-bold tabular-nums" :class="spend.due ? 'text-yellow-700' : 'text-gray-900'">{{ money(spend.due) }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-gray-400">Awaiting approval</dt>
+                        <dd class="text-xl font-bold text-gray-900 tabular-nums">{{ money(spend.awaiting) }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-gray-400">Paid this month</dt>
+                        <dd class="text-xl font-bold text-gray-900 tabular-nums">{{ money(spend.paid_this_month) }}</dd>
+                    </div>
+                    <div>
+                        <dt class="text-xs text-gray-400">Paid in total</dt>
+                        <dd class="text-xl font-bold text-gray-900 tabular-nums">{{ money(spend.paid_total) }}</dd>
+                    </div>
+                </dl>
+                <p class="text-xs text-gray-400 mt-4">
+                    "Due now" is work you have approved but not paid. "Awaiting approval" becomes due once you approve every deliverable.
+                </p>
+            </section>
+
+            <section class="bg-white rounded-2xl border border-gray-100 p-6" aria-labelledby="bd-rating">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 id="bd-rating" class="font-semibold text-gray-900">Creator rating</h2>
+                    <NuxtLink to="/brand/reviews" class="text-sm text-blue-600 hover:underline">All reviews</NuxtLink>
+                </div>
+                <template v-if="rating.count">
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl font-bold text-gray-900 tabular-nums">{{ rating.average?.toFixed(1) }}</span>
+                        <div>
+                            <StarRating :model-value="rating.average ?? 0" readonly size="sm" />
+                            <p class="text-xs text-gray-400 mt-0.5">{{ rating.count }} review{{ rating.count === 1 ? "" : "s" }}</p>
+                        </div>
+                    </div>
+                    <blockquote v-if="rating.latest?.body" class="mt-4 border-l-2 border-gray-100 pl-3 text-sm text-gray-600 line-clamp-3">
+                        {{ rating.latest.body }}
+                        <footer class="text-xs text-gray-400 mt-1">{{ rating.latest.creator }}<template v-if="rating.latest.campaign"> · {{ rating.latest.campaign }}</template></footer>
+                    </blockquote>
+                </template>
+                <p v-else class="text-sm text-gray-400">
+                    No reviews yet. Creators can review you once their work is approved or paid.
+                </p>
+            </section>
         </div>
 
         <!-- Charts -->
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-8">
-            <!-- Application outcomes donut -->
-            <div class="bg-white rounded-2xl border border-gray-100 p-6">
-                <h2 class="font-semibold text-gray-900 mb-4">Application Outcomes</h2>
-                <div class="flex items-center gap-6">
-                    <div class="relative w-32 h-32 shrink-0">
-                        <svg viewBox="0 0 36 36" class="w-full h-full -rotate-90">
-                            <circle cx="18" cy="18" r="15.9155" fill="none" stroke="#f3f4f6" stroke-width="4" />
-                            <circle
-                                v-for="seg in donutSegments"
-                                :key="seg.key"
-                                v-show="seg.pct > 0"
-                                cx="18" cy="18" r="15.9155" fill="none"
-                                :stroke="seg.color" stroke-width="4"
-                                :stroke-dasharray="seg.dash"
-                                :stroke-dashoffset="seg.offset"
-                            />
-                        </svg>
-                        <div class="absolute inset-0 flex flex-col items-center justify-center">
-                            <span class="text-xl font-bold text-gray-900">
-                                {{ appStats.approval_rate === null ? "–" : appStats.approval_rate + "%" }}
-                            </span>
-                            <span class="text-[11px] text-gray-400">approval rate</span>
-                        </div>
-                    </div>
-                    <ul class="space-y-2 text-sm">
-                        <li v-for="seg in donutSegments" :key="seg.key" class="flex items-center gap-2">
-                            <span class="w-2.5 h-2.5 rounded-full" :style="{ background: seg.color }" />
-                            <span class="text-gray-600">{{ seg.label }}</span>
-                            <span class="font-semibold text-gray-900 ml-auto pl-3">{{ seg.value }}</span>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-8">
             <!-- Products active vs inactive -->
             <div class="bg-white rounded-2xl border border-gray-100 p-6">
                 <div class="flex items-center justify-between mb-4">
@@ -314,6 +382,10 @@ const activePct = computed(() =>
                     View all
                 </NuxtLink>
             </div>
+            <p v-if="appStats.total" class="px-6 py-2.5 text-xs text-gray-500 bg-gray-50 border-b border-gray-100 tabular-nums">
+                {{ appStats.total }} total · {{ appStats.approved }} approved · {{ appStats.rejected }} rejected
+                <template v-if="appStats.approval_rate !== null"> · {{ appStats.approval_rate }}% approval rate</template>
+            </p>
 
             <!-- Empty state -->
             <div

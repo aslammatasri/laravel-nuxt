@@ -12,6 +12,7 @@ use App\Http\Controllers\Brand\ApplicationController as BrandApplicationControll
 use App\Http\Controllers\Brand\CreatorController as BrandCreatorController;
 use App\Http\Controllers\Brand\DashboardController as BrandDashboardController;
 use App\Http\Controllers\Creator\ApplicationController as CreatorApplicationController;
+use App\Http\Controllers\Creator\BrandController as CreatorBrandController;
 use App\Http\Controllers\Creator\CollaborationController;
 use App\Http\Controllers\Creator\DashboardController as CreatorDashboardController;
 use App\Http\Controllers\Creator\SocialAccountController;
@@ -72,6 +73,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('dashboard/stats', [BrandDashboardController::class, 'stats']);
         Route::get('verification',    [BrandVerificationController::class, 'show']);
         Route::put('verification',    [BrandVerificationController::class, 'update']);
+        Route::get('reviews',         [\App\Http\Controllers\Brand\BrandReviewController::class, 'index']);
+        Route::get('about',           [\App\Http\Controllers\Brand\AboutController::class, 'show']);
+        Route::put('about',           [\App\Http\Controllers\Brand\AboutController::class, 'update']);
         Route::apiResource('products', BrandProductController::class);
         Route::post('products/{product}/variations',               [VariationController::class, 'store']);
         Route::put('products/{product}/variations/{variation}',    [VariationController::class, 'update']);
@@ -105,12 +109,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('marketplace',             [CreatorProductController::class, 'index']);
         Route::get('marketplace/categories',  [CreatorProductController::class, 'categories']);
         Route::get('marketplace/{id}',        [CreatorProductController::class, 'show']);
+        Route::get('brands/{id}',             [CreatorBrandController::class, 'show']);
         Route::post('products/{id}/apply',    [CreatorApplicationController::class, 'store']);
         Route::get('applications',            [CreatorApplicationController::class, 'index']);
         Route::get('payout-details',          [\App\Http\Controllers\Creator\PayoutDetailsController::class, 'show']);
         Route::put('payout-details',          [\App\Http\Controllers\Creator\PayoutDetailsController::class, 'update']);
         Route::get('earnings',                [\App\Http\Controllers\Creator\EarningsController::class, 'index']);
         Route::get('collaborations',          [CollaborationController::class, 'index']);
+        Route::put('collaborations/{id}/review',    [\App\Http\Controllers\Creator\BrandReviewController::class, 'save']);
+        Route::delete('collaborations/{id}/review', [\App\Http\Controllers\Creator\BrandReviewController::class, 'destroy']);
         Route::post('collaborations/{id}/tasks',               [CollaborationController::class, 'storeTask']);
         Route::patch('collaborations/{id}/tasks/{taskId}',     [CollaborationController::class, 'updateTask']);
         Route::delete('collaborations/{id}/tasks/{taskId}',    [CollaborationController::class, 'destroyTask']);

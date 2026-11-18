@@ -12,7 +12,7 @@ interface Product {
     description: string;
     price: string | number;
     category: string;
-    brand: { name: string; avatar?: string | null; brand_profile?: { is_verified: boolean } | null };
+    brand: { id?: number; name: string; avatar?: string | null; brand_profile?: { is_verified: boolean } | null };
     my_application_status: 'pending' | 'approved' | 'rejected' | null;
     platforms?: string[] | null;
     free_sample?: boolean;
@@ -298,7 +298,9 @@ function resetAll() {
                         <span class="mp-card__cat">{{ product.category }}</span>
                         <span class="mp-card__brand mp-card__brand--row">
                             <Avatar :src="product.brand?.avatar" :name="product.brand?.name" size="xxs" />
-                            by {{ product.brand?.name }}
+                            by
+                            <NuxtLink v-if="product.brand?.id" :to="`/creator/brands/${product.brand.id}`" class="mp-brandlink">{{ product.brand.name }}</NuxtLink>
+                            <template v-else>{{ product.brand?.name }}</template>
                             <span v-if="product.brand?.brand_profile?.is_verified" class="mp-verified" title="Verified brand">✓ Verified</span>
                         </span>
                     </p>
@@ -806,6 +808,13 @@ a:focus-visible {
     flex: 1;
     flex-direction: column;
     padding: 1rem 1.1rem 1.1rem;
+}
+.mp-brandlink {
+    position: relative;
+    z-index: 2; /* sits above the stretched card link */
+}
+.mp-brandlink:hover {
+    text-decoration: underline;
 }
 .mp-card__brand--row {
     display: inline-flex;

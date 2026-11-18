@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class ProductApplication extends Model
 {
@@ -43,6 +44,11 @@ class ProductApplication extends Model
     public function tasks(): HasMany
     {
         return $this->hasMany(CollaborationTask::class, 'application_id')->orderBy('position')->orderBy('id');
+    }
+
+    public function review(): HasOne
+    {
+        return $this->hasOne(BrandReview::class, 'application_id');
     }
 
     public function clicks(): HasMany
@@ -116,5 +122,18 @@ class ProductApplication extends Model
             'approved'  => $deliverables->where('review_status', 'approved')->count(),
             'total'     => $deliverables->count(),
         ];
+    }
+
+    // All deliverables delivered: every task done and every reviewed task approved
+    public function workComplete(): bool
+    {
+        return $this->tasks->isNotEmpty()
+            && $this->tasks->every(fn ($t) => $t->completed_at !== null && (! $t->needsReview() || $t->review_status === 'approved'));
+    }
+
+    // A creator can review the brand once the work is finished or the brand has paid
+    public function canBeReviewed(): bool
+    {
+        return $this->status === ApplicationStatus::APPROVED && ($this->paid_at !== null || $this->workComplete());
     }
 }

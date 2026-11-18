@@ -7,6 +7,7 @@ const navItems = [
   { label: 'Campaigns',    icon: 'products',     to: '/brand/products'     },
   { label: 'Applications', icon: 'applications', to: '/brand/applications' },
   { label: 'Creators',     icon: 'creators',     to: '/brand/creators'     },
+  { label: 'Reviews',      icon: 'star',         to: '/brand/reviews'      },
   { label: 'Messages',     icon: 'messages',     to: '/messages'           },
 ]
 

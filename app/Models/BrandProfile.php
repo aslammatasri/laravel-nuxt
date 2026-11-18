@@ -11,6 +11,7 @@ class BrandProfile extends Model
         'user_id',
         'company_name',
         'industry',
+        'about',
         'ssm_no',
         'is_verified',
         'verification_status',
